@@ -4,7 +4,7 @@ object PDFiumFrame: TPDFiumFrame
   Width = 451
   Height = 305
   HorzScrollBar.Tracking = True
-  VertScrollBar.Smooth = True
+  VertScrollBar.Increment = 27
   VertScrollBar.Tracking = True
   Align = alClient
   DoubleBuffered = True
@@ -13,6 +13,4 @@ object PDFiumFrame: TPDFiumFrame
   ParentColor = False
   ParentDoubleBuffered = False
   TabOrder = 0
-  ExplicitWidth = 496
-  ExplicitHeight = 393
 end

@@ -9,11 +9,13 @@ unit PDFium.Frame;
    https://github.com/ahausladen/PdfiumLib
 
    2017-09-09  v1.0
+   2017-09-10  v1.1 better scrolling (less redraw)
 
 }
 
 interface
-
+{-$DEFINE TRACK_CURSOR}
+{-$DEFINE TRACK_EVENTS}
 uses
   Winapi.Windows, Winapi.Messages,
 
@@ -88,8 +90,11 @@ type
     FSelPage  : TPDFPage;
     FSelStart : Integer;
     FSelBmp   : TBitmap;
+    FInvalide : Boolean;
+  {$IFDEF TRACK_CURSOR}
     FCharIndex: Integer;
     FCharBox  : TRectD;
+  {$ENDIF}
     procedure SetDocument(Value: HPDFDocument);
     procedure SetPageCount(Value: Integer);
     procedure SetScrollSize;
@@ -101,6 +106,7 @@ type
     function GetPage(PageIndex: Integer): TPDFPage;
     function GetPageAt(const p: TPoint): TPDFPage;
     procedure LoadVisiblePages;
+    procedure WMEraseBkGnd(var Msg: TMessage); message WM_ERASEBKGND;
     procedure WMPaint(var Msg: TWMPaint); message WM_PAINT;
     procedure WMHScroll(var Message: TWMHScroll); message WM_HSCROLL;
     procedure WMVScroll(var Message: TWMVScroll); message WM_VSCROLL;
@@ -118,6 +124,7 @@ type
     { Déclarations publiques }
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    procedure Invalidate; override;
     procedure LoadFromMemory(APointer: Pointer; ASize: Integer);
     procedure LoadFromStream(AStream: TStream);
     procedure LoadFromFile(const AFileName: string);
@@ -260,7 +267,11 @@ end;
 
 constructor TPDFiumFrame.Create(AOwner: TComponent);
 begin
+{$IFDEF TRACK_EVENTS}
+  AllocConsole;
+{$ENDIF}
   inherited;
+  ControlStyle := ControlStyle + [csOpaque];
   FZoom := 100;
   FPageIndex := -1;
 
@@ -462,6 +473,17 @@ begin
   Result := nil;
 end;
 
+procedure TPDFiumFrame.Invalidate;
+begin
+  if FInvalide = False then
+  begin
+    inherited;
+    FInvalide := True;
+  end else begin
+  {$IFDEF TRACK_EVENTS}WriteLn('Not invalidated');{$ENDIF}
+  end;
+end;
+
 procedure TPDFiumFrame.LoadVisiblePages;
 var
   Index : Integer;
@@ -572,6 +594,7 @@ begin
     i := FCurPage.CharIndex(x, y, i); // character under the cursor in the current page
   end;
 
+{$IFDEF TRACK_CURSOR}
   if i <> FCharIndex then
   begin
     FCharIndex := i;
@@ -579,6 +602,7 @@ begin
       FPDFText_GetCharBox(FCurPage.Text, i, FCharBox.Left, FCharBox.Right, FCharBox.Bottom, FCharBox.Top);
     Invalidate;
   end;
+{$ENDIF}
 
   // selecting
   if FSelPage <> nil then
@@ -636,20 +660,32 @@ begin
   FSelPage := nil; // exit selection mode
 end;
 
+procedure TPDFiumFrame.WMEraseBkGnd(var Msg: TMessage);
+begin
+{$IFDEF TRACK_EVENTS}WriteLn('WM_ERASEBKGND');{$ENDIF}
+  Msg.Result := 1;
+end;
+
 procedure TPDFiumFrame.WMHScroll(var Message: TWMHScroll);
 begin
+{$IFDEF TRACK_EVENTS}WriteLn('WM_HSCROLL');{$ENDIF}
   FReload := True;
   inherited;
 end;
 
 procedure TPDFiumFrame.WMVScroll(var Message: TWMVScroll);
 begin
+{$IFDEF TRACK_EVENTS}WriteLn('WM_VSCROLL');{$ENDIF}
   FReload := True;
   inherited;
 end;
-
+{$IFDEF TRACK_EVENTS}
+var
+  Paints: Integer = 0;
+{$ENDIF}
 procedure TPDFiumFrame.WMPaint(var Msg: TWMPaint);
 begin
+{$IFDEF TRACK_EVENTS}WriteLn('WM_PAINT ', Paints); Inc(Paints);{$ENDIF}
   ControlState := ControlState + [csCustomPaint];
   inherited;
   ControlState := ControlState - [csCustomPaint];
@@ -689,8 +725,11 @@ var
   SelDC : HDC;
   Blend : TBlendFunction;
 begin
+  FInvalide := False;
+// Target rect
+  Client := ClientRect;
 // gray background
-  FillRect(DC, ClientRect, GetStockObject(GRAY_BRUSH));
+  FillRect(DC, Client, GetStockObject(GRAY_BRUSH));
 // nothing to render
   if FPageCount = 0 then
     Exit;
@@ -710,8 +749,6 @@ begin
   Blend.SourceConstantAlpha := 127;
   Blend.AlphaFormat := 0;
 
-  Client := ClientRect;
-
   for Index := 0 to FPages.Count - 1 do
   begin
     Page := FPages[Index];
@@ -722,7 +759,7 @@ begin
       Page.DrawSelection(DC, SelDC, Blend, Client);
     end;
   end;
-
+{$IFDEF TRACK_CURSOR}
   if (FCurPage <> nil) and (FCharIndex >= 0) then
   begin
     with FCurPage do
@@ -732,6 +769,7 @@ begin
     end;
     DrawFocusRect(DC, Client);
   end;
+{$ENDIF}
 end;
 
 procedure TPDFiumFrame.Resize;

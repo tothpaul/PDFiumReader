@@ -4,6 +4,7 @@ interface
 
 uses
   System.Types,
+  System.UITypes,
   Vcl.Graphics;
 
 type

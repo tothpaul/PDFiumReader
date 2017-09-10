@@ -22,7 +22,7 @@ object MainForm: TMainForm
     Width = 548
     Height = 438
     HorzScrollBar.Tracking = True
-    VertScrollBar.Smooth = True
+    VertScrollBar.Increment = 27
     VertScrollBar.Tracking = True
     Align = alClient
     DoubleBuffered = True

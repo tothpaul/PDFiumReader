@@ -11,7 +11,9 @@ unit PDFium.Wrapper;
 interface
 
 {$DEFINE DELAYED}
-
+{$IFDEF DELAYED}
+  {$WARN SYMBOL_PLATFORM OFF}
+{$ENDIF}
 const
   DLL = 'PDFium.dll';
 
@@ -274,7 +276,8 @@ function FPDFText_LoadPage(page: HPDFPage): HPDFTextPage;
   {$IFDEF WIN32}name '_FPDFText_LoadPage@4'{$ENDIF}
   {$IFDEF DELAYED}delayed{$ENDIF};
 
-// Function: FPDFText_CountChars
+
+// Function: FPDFText_CountChars
 //      Get number of characters in a page.
 // Parameters:
 //      text_page  -  Handle to a text page information structure. Returned by FPDFText_LoadPage function.
