@@ -4,14 +4,10 @@ you can use the [source code](https://github.com/tothpaul/PDFiumReader/tree/mast
 
 ## About PDFiumReader.exe
 
-it's a Release version of the provided source code compiled with Delphi Tokyo 10.2.1 for Win32
+it's a Release version of the provided source code compiled with Delphi Tokyo 10.2.3 for Win32
 
-## About PDFium.DLL
+## About libPDFium.DLL
 
-the provided DLL is a copy of a 2016 version from [PDFiumViewer](https://github.com/pvginkel/PdfiumViewer/tree/master/Libraries/Pdfium)
-
-you should not use this version in production, it is provided only for testing purpose.
-
-I'm not a C++ guy, so I will not try to compile a new version of this DLL.
+libPDFium is my own build of PDFium as a DLL with the current (30/11/2018) source code of PDFium
 
 More info on PDFium on [googlesource.com](https://pdfium.googlesource.com/pdfium/)

@@ -1,0 +1,35 @@
+LIBRARY libpdfium.dll
+
+EXPORTS
+	PDF_FreeHandle
+	PDF_Create
+	PDF_Free
+	PDF_GetVersion
+	PDF_GetError
+	PDF_LoadFromFile
+	PDF_LoadFromMemory
+	PDF_GetPermissions
+	PDF_GetPageCount
+	PDF_GetPageSize
+	PDF_GetPage
+	PDF_SaveToStream
+	PDF_SaveToProc
+	PDFPage_Free
+	PDFPage_Render
+	PDFPage_GetAnnotationCount
+	PDFPage_GetAnnotation
+	PDFPage_GetText
+	PDFPage_DeviveToPage
+	PDFPage_PageToDevice
+	PDFText_Free
+	PDFText_CharCount
+	PDFText_GetText
+	PDFText_CharIndexAtPos
+	PDFText_GetRectCount
+	PDFText_GetRect
+	PDFAnnotation_Free
+	PDFAnnotation_GetSubtype
+	PDFAnnotation_GetRect
+	PDFAnnotation_SetRect
+	PDFAnnotation_GetString
+	PDFAnnotation_Remove

@@ -4,8 +4,8 @@ uses
   Vcl.Forms,
   Main in 'Main.pas' {MainForm},
   PDFium.Frame in 'PDFium.Frame.pas' {PDFiumFrame: TFrame},
-  PDFium.Wrapper in 'PDFium.Wrapper.pas',
-  DynamicButtons in 'DynamicButtons.pas';
+  DynamicButtons in 'DynamicButtons.pas',
+  Execute.libPDFium in 'Execute.libPDFium.pas';
 
 {$R *.res}
 

@@ -1,0 +1,12 @@
+# Build arguments go here.
+# See "gn args <out_dir> --list" for available build arguments.
+pdf_is_standalone = true
+pdf_enable_xfa = false
+pdf_enable_v8 = false
+is_official_build = true
+is_component_build = false
+is_debug = false
+symbol_level = 0
+#enable_nacl = false
+#remove_webcore_debug_symbols = true
+target_cpu = "x86"

@@ -1,7 +1,7 @@
 object MainForm: TMainForm
   Left = 0
   Top = 0
-  Caption = 'PDFium Reader (c)2017 Execute SARL'
+  Caption = 'PDFium Reader (c)2017-2018 Execute SARL'
   ClientHeight = 486
   ClientWidth = 548
   Color = clBtnFace

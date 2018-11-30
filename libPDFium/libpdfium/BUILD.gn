@@ -1,0 +1,17 @@
+shared_library("libpdfium") {
+  cflags = []
+  ldflags = []
+  sources = [
+    "libpdfium.h",
+    "libpdfium.def",
+    "libpdfium.cc",
+  ]
+  defines = [
+    "PNG_PREFIX",
+    "PNG_USE_READ_MACROS",
+  ]
+  deps = [
+    "../:pdfium",
+    "//build/win:default_exe_manifest",
+  ]
+}

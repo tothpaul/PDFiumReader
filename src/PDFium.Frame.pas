@@ -1,21 +1,19 @@
 unit PDFium.Frame;
 
 {
-   PDF viewer using PDFium.dll (c)2017 by Execute SARL
+   PDF viewer using libPDFium.dll (c)2017-2018 by Execute SARL
    http://www.execute.fr
-   https://github.com/tothpaul/Delphi
-
-   inspired by PdfiumLib
-   https://github.com/ahausladen/PdfiumLib
+   https://github.com/tothpaul/PDFiumReader
 
    2017-09-09  v1.0
    2017-09-10  v1.1 better scrolling (less redraw)
+   2018-11-30  v2.0 switched from PDFium.DLL to libPDFium.DLL
 
 }
 
 interface
-{-$DEFINE TRACK_CURSOR}
-{-$DEFINE TRACK_EVENTS}
+{.$DEFINE TRACK_CURSOR}
+{.$DEFINE TRACK_EVENTS}
 uses
   Winapi.Windows, Winapi.Messages,
 
@@ -23,7 +21,7 @@ uses
 
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
 
-  PDFium.Wrapper, Vcl.ExtCtrls;
+  Execute.libPDFium, Vcl.ExtCtrls;
 
 const
   PAGE_MARGIN = 5;  // pixels
@@ -40,31 +38,17 @@ type
   private
     { Déclarations privées }
     type
-      // One point is 1/72 inch (around 0.3528 mm).
-      TPointsSize = record
-        cx : Double;
-        cy : Double;
-      end;
-
-      TRectD = record
-        Left   : Double;
-        Top    : Double;
-        Right  : Double;
-        Bottom : Double;
-      end;
-
       TPDFPage = class
         Index    : Integer;
-        Handle   : HPDFPage;
+        Handle     : IPDFPage;
         Top      : Double;
         Rect     : TRect;
-        Text     : HPDFTextPage;
+        Text       : IPDFText;
         NoText   : Boolean;
         Visible  : Integer;
         SelStart : Integer;
         SelStop  : Integer;
         Selection: TArray<TRectD>;
-        destructor Destroy; override;
         function HasText: Boolean;
         function CharIndex(x, y, distance: Integer): Integer;
         function CharCount: Integer;
@@ -75,7 +59,7 @@ type
       end;
 
   private
-    FDocument : HPDFDocument;
+    FPDF      : IPDFium;
     FError    : Integer;
     FPageCount: Integer;
     FPageSize : TArray<TPointsSize>;
@@ -95,13 +79,12 @@ type
     FCharIndex: Integer;
     FCharBox  : TRectD;
   {$ENDIF}
-    procedure SetDocument(Value: HPDFDocument);
+    procedure OnLoad;
     procedure SetPageCount(Value: Integer);
     procedure SetScrollSize;
     procedure SetZoom(Value: Single);
     procedure SetZoomMode(Value: TZoomMode);
     procedure AdjustZoom;
-    property _Document: HPDFDocument read FDocument write SetDocument;
     procedure ClearPages;
     function GetPage(PageIndex: Integer): TPDFPage;
     function GetPageAt(const p: TPoint): TPDFPage;
@@ -131,7 +114,6 @@ type
     procedure ClearSelection;
     function PageLevelZoom: Single;
     function PageWidthZoom: Single;
-    property Document: HPDFDocument read FDocument;
     property PageIndex: Integer read FPageIndex;
     property PageCount: Integer read FPageCount;
     property Zoom: Single read FZoom write SetZoom;
@@ -143,16 +125,16 @@ implementation
 {$R *.dfm}
 
 resourcestring
-  sUnableToLoadPDFium = 'Unable to load PDFium.dll';
+  sUnableToLoadPDFium = 'Unable to load libPDFium.dll';
 
 { TPDFiumFrame.TPDFPage }
 
 function TPDFiumFrame.TPDFPage.HasText: Boolean;
 begin
-  if (Text = 0) and (NoText = False) then
+  if (Text = nil) and (NoText = False) then
   begin
-    Text := FPDFText_LoadPage(Handle);
-    NoText := Text = 0;
+    Handle.GetText(Text);
+    NoText := Text = nil;
   end;
   Result := not NoText;
 end;
@@ -160,7 +142,7 @@ end;
 function TPDFiumFrame.TPDFPage.CharCount: Integer;
 begin
   if HasText then
-    Result := FPDFText_CountChars(Text)
+    Result := Text.CharCount
   else
     Result := 0;
 end;
@@ -171,8 +153,8 @@ var
 begin
   if HasText = False then
     Exit(-1);
-  FPDF_DeviceToPage(Handle, Rect.Left, Rect.Top, Rect.Width, Rect.Height, 0, x, y, Pos.cx, Pos.cy);
-  Result := FPDFText_GetCharIndexAtPos(Text, Pos.cx, Pos.cy, distance, distance)
+  Handle.DeviceToPage(Rect, x, y, Pos.cx, Pos.cy);
+  Result := Text.CharIndexAtPos(Pos, distance);
 end;
 
 function TPDFiumFrame.TPDFPage.ClearSelection: Boolean;
@@ -186,14 +168,6 @@ begin
   end;
 end;
 
-destructor TPDFiumFrame.TPDFPage.Destroy;
-begin
-  if Text <> 0 then
-    FPDFText_ClosePage(Text);
-  FPDF_ClosePage(Handle);
-  inherited;
-end;
-
 procedure TPDFiumFrame.TPDFPage.DrawSelection(DC, BMP: HDC; const Blend: TBlendFunction; const Client: TRect);
 var
   Index: Integer;
@@ -203,8 +177,8 @@ begin
   begin
     with Selection[Index] do
     begin
-      FPDF_PageToDevice(Handle, Rect.Left, Rect.Top, Rect.Width, Rect.Height, 0, Left, Top, R.Left, R.Top);
-      FPDF_PageToDevice(Handle, Rect.Left, Rect.Top, Rect.Width, Rect.Height, 0, Right, Bottom, R.Right, R.Bottom);
+      Handle.PageToDevice(Rect, Left, Top, R.Left, R.Top);
+      Handle.PageToDevice(Rect, Right, Bottom, R.Right, R.Bottom);
     end;
     if Client.IntersectsWith(R) then
       AlphaBlend(DC, R.Left, R.Top, R.Width, R.Height, BMP, 0, 0, 100, 50, Blend);
@@ -252,12 +226,11 @@ begin
       Start := SelStop;
       SelLen := -SelLen;
     end;
-    Count := FPDFText_CountRects(Text, Start, SelLen);
+    Count := Text.GetRectCount(Start, SelLen);
     SetLength(Selection, Count);
     for Index := 0 to Count - 1 do
     begin
-      with Selection[Index] do
-        FPDFText_GetRect(Text, Index, Left, Top, Right, Bottom);
+      Text.GetRect(Index, Selection[Index]);
     end;
   end;
 
@@ -281,7 +254,7 @@ begin
 
   FPages := TList.Create;
   try
-    FPDF_InitLibrary;
+    PDF_Create(1, FPDF);
   except
     FStatus := TLabel.Create(Self);
     FStatus.Align := alClient;
@@ -294,7 +267,6 @@ end;
 
 destructor TPDFiumFrame.Destroy;
 begin
-  _Document := 0;
   FPages.Free;
   inherited;
 end;
@@ -312,12 +284,16 @@ var
   AnsiName: AnsiString;
 begin
   AnsiName := AnsiString(AFileName);
-  _Document := FPDF_LoadDocument(PAnsiChar(AnsiName), nil);
+  ClearPages;
+  FError := FPDF.LoadFromFile(PAnsiChar(AnsiName), nil);
+  OnLoad;
 end;
 
 procedure TPDFiumFrame.LoadFromMemory(APointer: Pointer; ASize: Integer);
 begin
-  _Document := FPDF_LoadMemDocument(APointer, ASize, nil);
+  ClearPages;
+  FError := FPDF.LoadFromMemory(APointer, ASize, nil);
+  OnLoad;
 end;
 
 procedure TPDFiumFrame.LoadFromStream(AStream: TStream);
@@ -338,16 +314,10 @@ begin
   end;
 end;
 
-procedure TPDFiumFrame.SetDocument(Value: HPDFDocument);
+procedure TPDFiumFrame.OnLoad;
 begin
-  ClearPages;
-  if FDocument <> 0 then
-    FPDF_CloseDocument(FDocument);
-  FDocument := Value;
-  if FDocument = 0 then
-    FError := FPDF_GetLastError
-  else
-    SetPageCount(FPDF_GetPageCount(FDocument));
+  if FError = 0 then
+    SetPageCount(FPDF.GetPageCount);
   FReload := True;
   Invalidate;
 end;
@@ -365,7 +335,7 @@ begin
     for Index := 0 to FPageCount - 1 do
       with FPageSize[Index] do
       begin
-        FPDF_GetPageSizeByIndex(FDocument, Index, cx, cy);
+        FPDF.GetPageSize(Index, cx, cy);
         if cx > FTotalSize.cx then
           FTotalSize.cx := cx;
         FTotalSize.cy := FTotalSize.cy + cy;
@@ -392,12 +362,9 @@ begin
   if Value > 6400 then
     Value := 6400;
   FZoom := Value;
-  if FDocument <> 0 then
-  begin
-    SetScrollSize;
-    FReload := True;
-    Invalidate;
-  end;
+  SetScrollSize;
+  FReload := True;
+  Invalidate;
   if Assigned(OnResize) then
     OnResize(Self);
 end;
@@ -457,7 +424,7 @@ begin
   Result := TPDFPage.Create;
   FPages.Add(Result);
   Result.Index := PageIndex;
-  Result.Handle := FPDF_LoadPage(FDocument, PageIndex);
+  FPDF.GetPage(PageIndex, Result.Handle);
 end;
 
 function TPDFiumFrame.GetPageAt(const p: TPoint): TPDFPage;
@@ -581,7 +548,9 @@ begin
 
   // page under the cursor
   if (FCurPage = nil) or (FCurPage.Rect.Contains(p) = False) then
+  begin
     FCurPage := GetPageAt(p);
+  end;
 
   // there's a page under the cursor
   if FCurPage = nil then
@@ -755,7 +724,7 @@ begin
     if Page.Visible > 0 then
     begin
       FillRect(DC, Page.Rect, WHITE);
-      FPDF_RenderPage(DC, Page.Handle, Page.Rect.Left, Page.Rect.Top, Page.Rect.Width, Page.Rect.Height, 0, 0);
+      Page.Handle.Render(DC, Page.Rect, 0, FPDF_ANNOT);
       Page.DrawSelection(DC, SelDC, Blend, Client);
     end;
   end;

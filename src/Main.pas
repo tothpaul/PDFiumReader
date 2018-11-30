@@ -1,13 +1,10 @@
 unit Main;
 
 {
-   PDF viewer using PDFium.dll (c)2017 by Execute SARL
+   PDF viewer using libPDFium.dll (c)2017-2018 by Execute SARL
    http://www.execute.fr
-   https://github.com/tothpaul/Delphi
+   https://github.com/tothpaul/PDFiumReader
 
-
-   inspired by PdfiumLib
-   https://github.com/ahausladen/PdfiumLib
 
 }
 interface
