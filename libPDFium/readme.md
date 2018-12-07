@@ -27,7 +27,7 @@ I know, libpdfium.h exposes the internal members of my objects, but it's not my 
 BTW if you know how to add a version.rc file to this project, let me know :)
 
 ## Requirements to recompile libPDFium
-install depot_tools
+install [depot_tools](https://www.chromium.org/developers/how-tos/depottools)
 ````
  set path=%path%;<depot_tools_directory>
  set DEPOT_TOOLS_WIN_TOOLCHAIN=0
