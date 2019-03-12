@@ -301,6 +301,14 @@ int WINAPI PDF_GetError(IPDFium pdf) {
   return (int)FPDF_GetLastError;
 }
 
+int WINAPI PDF_CloseDocument(IPDFium pdf) {
+  LOG("PDF_CloseDocument\n")
+  REF(pdf)
+  if ((*pdf)->Handle) FPDF_CloseDocument((*pdf)->Handle);
+  (*pdf)->Handle = 0;
+  return 0;
+}
+
 int WINAPI PDF_LoadFromFile(IPDFium pdf, char* filename, char* pwd) {
   LOG("PDF_LoadFromFile\n")
   REF(pdf)
@@ -437,6 +445,7 @@ int WINAPI PDF_Create(int RequestedVersion, IPDFium* pdf) {
   // IPDFInterface
   PDF->GetVersion = PDF_GetVersion;
   PDF->GetError = PDF_GetError;
+  PDF->CloseDocument = PDF_CloseDocument;
   PDF->LoadFromFile = PDF_LoadFromFile;
   PDF->LoadFromMemory = PDF_LoadFromMemory;
   PDF->GetPermissions = PDF_GetPermissions;

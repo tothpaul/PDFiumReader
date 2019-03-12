@@ -133,6 +133,7 @@ struct TPDFium {
 // IPDFium
   int(__stdcall *GetVersion)(IPDFium pdf);
   int(__stdcall *GetError)(IPDFium pdf);
+  int(__stdcall *CloseDocument)(IPDFium pdf);
   int(__stdcall *LoadFromFile)(IPDFium pdf, char *filename, char *pwd);
   int(__stdcall *LoadFromMemory)(IPDFium pdf, void *data, int size, char *pwd);
   long(__stdcall *GetPermissions)(IPDFium pdf);
@@ -155,6 +156,7 @@ int __stdcall PDF_Create(int RequiredVersion, IPDFium *pdf);
 int __stdcall PDF_Free(IPDFium pdf);
 int __stdcall PDF_GetVersion(IPDFium pdf);
 int __stdcall PDF_GetError(IPDFium pdf);
+int __stdcall PDF_CloseDocument(IPDFium pdf);
 int __stdcall PDF_LoadFromFile(IPDFium pdf, char *filename, char *pwd);
 int __stdcall PDF_LoadFromMemory(IPDFium pdf, void *data, int size, char *pwd);
 long __stdcall PDF_GetPermissions(IPDFium pdf);
