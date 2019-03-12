@@ -2,7 +2,7 @@ object PDFiumFrame: TPDFiumFrame
   Left = 0
   Top = 0
   Width = 451
-  Height = 305
+  Height = 304
   HorzScrollBar.Tracking = True
   VertScrollBar.Increment = 27
   VertScrollBar.Tracking = True
