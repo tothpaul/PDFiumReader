@@ -417,6 +417,7 @@ begin
   ClearPages;
   FPDF.CloseDocument;
   SetPageCount(0);
+  Invalidate;
 end;
 
 function TPDFiumFrame.GetPage(PageIndex: Integer): TPDFPage;
