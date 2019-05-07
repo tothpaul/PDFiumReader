@@ -5,6 +5,7 @@ unit Execute.libPDFium;
    http://www.execute.fr
    https://github.com/tothpaul/PDFiumReader
 }
+{$WARN SYMBOL_PLATFORM OFF}
 
 
 interface
