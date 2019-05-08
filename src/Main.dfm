@@ -215,12 +215,17 @@ object MainForm: TMainForm
         ShortCut = 16463
         OnClick = Open1Click
       end
+      object Close1: TMenuItem
+        Caption = 'Close'
+        OnClick = Close1Click
+      end
       object N1: TMenuItem
         Caption = '-'
       end
       object Quit1: TMenuItem
         Caption = '&Quit'
         ShortCut = 16465
+        OnClick = Quit1Click
       end
     end
   end
