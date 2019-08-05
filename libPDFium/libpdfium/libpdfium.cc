@@ -100,10 +100,10 @@ int WINAPI PDFAnnotation_SetRect(IPDFAnnotation annotation, TRectF *rect) {
   return FPDFAnnot_SetRect((*annotation)->Handle, (FS_LPRECTF)rect);
 }
 
-int WINAPI PDFAnnotation_GetString(IPDFAnnotation annotation, char *key, char *str, int size) {
+int WINAPI PDFAnnotation_GetString(IPDFAnnotation annotation, const char *key, char *str, int size) {
   LOG("PDFAnnotation_GetString")
   REF(annotation)
-  return FPDFAnnot_GetStringValue((*annotation)->Handle, key, str, size);
+  return FPDFAnnot_GetStringValue((*annotation)->Handle, key, (unsigned short *)str, size);
 }
 
 int WINAPI PDFAnnotation_Remove(IPDFAnnotation annotation) {

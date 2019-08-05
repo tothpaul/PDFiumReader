@@ -78,7 +78,7 @@ struct TPDFAnnotation {
   int(__stdcall *GetSubtype)(IPDFAnnotation annotation);
   int(__stdcall *GetRect)(IPDFAnnotation annotation, TRectF *rect);
   int(__stdcall *SetRect)(IPDFAnnotation annotation, TRectF *rect);
-  int(__stdcall *GetString)(IPDFAnnotation annotation, char *key, char *str, int size);
+  int(__stdcall *GetString)(IPDFAnnotation annotation, const char *key, char *str, int size);
   int(__stdcall *Remove)(IPDFAnnotation annotation);
 // Internal
   PPDFAnnotation Reference;
