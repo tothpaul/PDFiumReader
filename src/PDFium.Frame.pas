@@ -108,6 +108,7 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure Invalidate; override;
+    procedure CloseDocument();
     procedure LoadFromMemory(APointer: Pointer; ASize: Integer);
     procedure LoadFromStream(AStream: TStream);
     procedure LoadFromFile(const AFileName: string);
@@ -409,6 +410,14 @@ begin
   end;
   if Clear then
     Invalidate;
+end;
+
+procedure TPDFiumFrame.CloseDocument;
+begin
+  ClearPages;
+  FPDF.CloseDocument;
+  SetPageCount(0);
+  Invalidate;
 end;
 
 function TPDFiumFrame.GetPage(PageIndex: Integer): TPDFPage;

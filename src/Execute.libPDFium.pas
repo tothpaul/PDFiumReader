@@ -5,6 +5,7 @@ unit Execute.libPDFium;
    http://www.execute.fr
    https://github.com/tothpaul/PDFiumReader
 }
+{$WARN SYMBOL_PLATFORM OFF}
 
 
 interface
@@ -58,6 +59,7 @@ type
   IPDFium = interface
     function GetVersion: Integer; stdcall;
     function GetError: Integer; stdcall;
+    function CloseDocument: integer; stdcall;
     function LoadFromFile(fileName, Password: PAnsiChar): Integer; stdcall;
     function LoadFromMemory(data: Pointer; Size: Integer; password: PAnsiChar): Integer; stdcall;
     function GetPermissions: LongWord; stdcall;

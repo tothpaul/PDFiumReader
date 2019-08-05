@@ -54,6 +54,7 @@ type
     btFullPage: TPaintBox;
     btActualSize: TPaintBox;
     btAbout: TPaintBox;
+    Close1: TMenuItem;
     procedure Open1Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -71,6 +72,8 @@ type
     procedure PDFiumResize(Sender: TObject);
     procedure mnActualSizeClick(Sender: TObject);
     procedure btAboutClick(Sender: TObject);
+    procedure Quit1Click(Sender: TObject);
+    procedure Close1Click(Sender: TObject);
   private
     { Déclarations privées }
     FButtons  : TBitmap;
@@ -200,6 +203,11 @@ begin
   end;
 end;
 
+procedure TMainForm.Close1Click(Sender: TObject);
+begin
+  PDFium.CloseDocument;
+end;
+
 procedure TMainForm.CreateButtons;
 begin
   FButtons.PixelFormat := pf32Bit;
@@ -300,6 +308,11 @@ begin
   mnActualSize.Checked := (PDFium.ZoomMode = zmCustom) and (Zoom = 10000);
   mnPageLevel.Checked := PDFium.ZoomMode = zmPageLevel;
   mnFitWidth.Checked := PDFium.ZoomMode = zmPageWidth;
+end;
+
+procedure TMainForm.Quit1Click(Sender: TObject);
+begin
+  Close();
 end;
 
 end.

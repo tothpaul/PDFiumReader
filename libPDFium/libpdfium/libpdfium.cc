@@ -14,13 +14,14 @@
 #include <stdio.h>
 HANDLE console;
 DWORD wOut;
-#define CONSOLE console = GetStdHandle(STD_OUTPUT_HANDLE);
+#define CONSOLE AllocConsole(); console = GetStdHandle(STD_OUTPUT_HANDLE);
 #define LOG(s) WriteConsoleA(console, s, strlen(s), &wOut, 0);
 #define REF(i) if (!i || !*i || (i != &(*i)->Reference)) LOG("Invalid Interface !!!\n")
 #else
 #define CONSOLE
 #define LOG(s)
 #define REF(i)
+
 #endif
 
 // DLL Main
@@ -301,6 +302,14 @@ int WINAPI PDF_GetError(IPDFium pdf) {
   return (int)FPDF_GetLastError;
 }
 
+int WINAPI PDF_CloseDocument(IPDFium pdf) {
+  LOG("PDF_CloseDocument\n")
+  REF(pdf)
+  if ((*pdf)->Handle) FPDF_CloseDocument((*pdf)->Handle);
+  (*pdf)->Handle = 0;
+  return 0;
+}
+
 int WINAPI PDF_LoadFromFile(IPDFium pdf, char* filename, char* pwd) {
   LOG("PDF_LoadFromFile\n")
   REF(pdf)
@@ -437,6 +446,7 @@ int WINAPI PDF_Create(int RequestedVersion, IPDFium* pdf) {
   // IPDFInterface
   PDF->GetVersion = PDF_GetVersion;
   PDF->GetError = PDF_GetError;
+  PDF->CloseDocument = PDF_CloseDocument;
   PDF->LoadFromFile = PDF_LoadFromFile;
   PDF->LoadFromMemory = PDF_LoadFromMemory;
   PDF->GetPermissions = PDF_GetPermissions;
