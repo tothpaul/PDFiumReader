@@ -75,6 +75,7 @@ type
     FSelStart : Integer;
     FSelBmp   : TBitmap;
     FInvalide : Boolean;
+    FOnPaint  : TNotifyEvent;
   {$IFDEF TRACK_CURSOR}
     FCharIndex: Integer;
     FCharBox  : TRectD;
@@ -103,6 +104,7 @@ type
     function DoMouseWheel(Shift: TShiftState; WheelDelta: Integer;
       MousePos: TPoint): Boolean; override;
     procedure MouseMove(Shift: TShiftState; X, Y: Integer); override;
+    function GetPageTop(Index: Integer): Integer;
   public
     { Déclarations publiques }
     constructor Create(AOwner: TComponent); override;
@@ -115,10 +117,14 @@ type
     procedure ClearSelection;
     function PageLevelZoom: Single;
     function PageWidthZoom: Single;
+    procedure NextPage;
+    procedure PrevPage;
+    procedure GoPage(Index: Integer);
     property PageIndex: Integer read FPageIndex;
     property PageCount: Integer read FPageCount;
     property Zoom: Single read FZoom write SetZoom;
     property ZoomMode: TZoomMode read FZoomMode write SetZoomMode;
+    property OnPaint: TNotifyEvent read FOnPaint write FOnPaint;
   end;
 
 implementation
@@ -449,6 +455,29 @@ begin
   Result := nil;
 end;
 
+function TPDFiumFrame.GetPageTop(Index: Integer): Integer;
+var
+  PageTop: Single;
+begin
+  PageTop := 0;
+  Result := PAGE_MARGIN * Index;
+  while Index > 0 do
+  begin
+    Dec(Index);
+    PageTop := PageTop + FPageSize[Index].cy;
+  end;
+  Inc(Result, Round(PageTop * FZoom / 100 * Screen.PixelsPerInch / 72));
+end;
+
+procedure TPDFiumFrame.GoPage(Index: Integer);
+begin
+  if (Index >= 0) and (Index < PageCount) then
+  begin
+    FReload := True;
+    VertScrollBar.Position := GetPageTop(Index);
+  end;
+end;
+
 procedure TPDFiumFrame.Invalidate;
 begin
   if FInvalide = False then
@@ -638,6 +667,11 @@ begin
   FSelPage := nil; // exit selection mode
 end;
 
+procedure TPDFiumFrame.NextPage;
+begin
+  GoPage(FPageIndex + 1);
+end;
+
 procedure TPDFiumFrame.WMEraseBkGnd(var Msg: TMessage);
 begin
 {$IFDEF TRACK_EVENTS}WriteLn('WM_ERASEBKGND');{$ENDIF}
@@ -748,6 +782,13 @@ begin
     DrawFocusRect(DC, Client);
   end;
 {$ENDIF}
+  if Assigned(FOnPaint) then
+    FOnPaint(Self);
+end;
+
+procedure TPDFiumFrame.PrevPage;
+begin
+  GoPage(FPageIndex - 1);
 end;
 
 procedure TPDFiumFrame.Resize;

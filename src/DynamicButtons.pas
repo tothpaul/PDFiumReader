@@ -25,6 +25,9 @@ type
     procedure DrawButtons(x: Integer; Color: TColor);
     procedure FixButtons(x: Integer; Color: TColor);
     procedure Arrow(x, y: Integer);
+    procedure Pipe(x: Integer);
+    procedure Prev(x: Integer);
+    procedure Next(x: Integer);
   end;
 
 procedure AntiAliaze(Bmp: TBitmap);
@@ -227,6 +230,14 @@ begin
   LineTo(x + 34, 24);
 end;
 
+procedure TCanvasHelper.Next(x: Integer);
+begin
+  Pipe(x);
+  MoveTo(x + 24 - 8, 34 - 8);
+  LineTo(x + 24, 34);
+  LineTo(x + 24 + 8, 34 - 8);
+end;
+
 procedure TCanvasHelper.FullPage(x: Integer);
 begin
   Paper(x + 10, 4, 32, 10);
@@ -252,11 +263,26 @@ begin
   Polygon(Slice(p, 3));
 end;
 
+procedure TCanvasHelper.Pipe(x: Integer);
+begin
+  Circle(x +  3,  3, 42, 42);
+  MoveTo(x + 24, 14);
+  LineTo(x + 24, 34);
+end;
+
 procedure TCanvasHelper.Plus(x: Integer);
 begin
   Minus(x);
   MoveTo(x + 24, 14);
   LineTo(x + 24, 34);
+end;
+
+procedure TCanvasHelper.Prev(x: Integer);
+begin
+  Pipe(x);
+  MoveTo(x + 24 - 8, 14 + 8);
+  LineTo(x + 24, 14);
+  LineTo(x + 24 + 8, 14 + 8);
 end;
 
 procedure TCanvasHelper.DrawButtons(x: Integer; Color: TColor);
@@ -269,6 +295,8 @@ begin
   FullPage(8 * 48 + x);
   ActualSize(10 * 48 + x);
   About(12 * 48 + x);
+  Prev(14 * 48 + x);
+  Next(16 * 48 + x);
 end;
 
 end.

@@ -1,9 +1,9 @@
 object MainForm: TMainForm
   Left = 0
   Top = 0
-  Caption = 'PDFium Reader (c)2017-2018 Execute SARL'
-  ClientHeight = 486
-  ClientWidth = 548
+  Caption = 'PDFium Reader (c)2017-2019 Execute SARL'
+  ClientHeight = 554
+  ClientWidth = 608
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -12,6 +12,7 @@ object MainForm: TMainForm
   Font.Style = []
   Menu = MainMenu1
   OldCreateOrder = False
+  Position = poScreenCenter
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   PixelsPerInch = 96
@@ -19,8 +20,8 @@ object MainForm: TMainForm
   inline PDFium: TPDFiumFrame
     Left = 0
     Top = 48
-    Width = 548
-    Height = 438
+    Width = 608
+    Height = 506
     HorzScrollBar.Tracking = True
     VertScrollBar.Increment = 27
     VertScrollBar.Tracking = True
@@ -32,14 +33,14 @@ object MainForm: TMainForm
     ParentDoubleBuffered = False
     TabOrder = 0
     OnResize = PDFiumResize
-    ExplicitTop = 48
+    ExplicitTop = 50
     ExplicitWidth = 548
     ExplicitHeight = 438
   end
   object pnButtons: TPanel
     Left = 0
     Top = 0
-    Width = 548
+    Width = 608
     Height = 48
     Align = alTop
     Caption = 'pnButtons'
@@ -48,6 +49,8 @@ object MainForm: TMainForm
     ShowCaption = False
     ShowHint = True
     TabOrder = 1
+    ExplicitTop = -6
+    ExplicitWidth = 548
     object btZPlus: TPaintBox
       Tag = 4
       AlignWithMargins = True
@@ -187,7 +190,7 @@ object MainForm: TMainForm
     object btAbout: TPaintBox
       Tag = 12
       AlignWithMargins = True
-      Left = 518
+      Left = 578
       Top = 12
       Width = 24
       Height = 24
@@ -203,6 +206,116 @@ object MainForm: TMainForm
       OnPaint = ButtonPaint
       ExplicitLeft = 338
       ExplicitTop = 24
+    end
+    object pnPages: TPanel
+      Left = 283
+      Top = 1
+      Width = 158
+      Height = 46
+      Align = alLeft
+      BevelOuter = bvNone
+      Caption = 'pnPages'
+      ParentBackground = False
+      ParentColor = True
+      ShowCaption = False
+      TabOrder = 0
+      Visible = False
+      OnResize = pnPagesResize
+      object btNext: TPaintBox
+        Tag = 16
+        AlignWithMargins = True
+        Left = 39
+        Top = 11
+        Width = 24
+        Height = 24
+        Hint = 'Page width'
+        Margins.Left = 5
+        Margins.Top = 11
+        Margins.Right = 5
+        Margins.Bottom = 11
+        Align = alLeft
+        OnClick = btNextClick
+        OnDblClick = btNextClick
+        OnMouseEnter = ButtonMouseEnter
+        OnMouseLeave = ButtonMouseLeave
+        OnPaint = ButtonPaint
+        ExplicitLeft = 374
+        ExplicitTop = 10
+      end
+      object btPrev: TPaintBox
+        Tag = 14
+        AlignWithMargins = True
+        Left = 5
+        Top = 11
+        Width = 24
+        Height = 24
+        Hint = 'Page width'
+        Margins.Left = 5
+        Margins.Top = 11
+        Margins.Right = 5
+        Margins.Bottom = 11
+        Align = alLeft
+        OnClick = btPrevClick
+        OnDblClick = btPrevClick
+        OnMouseEnter = ButtonMouseEnter
+        OnMouseLeave = ButtonMouseLeave
+        OnPaint = ButtonPaint
+        ExplicitTop = 9
+      end
+      object lbPages: TLabel
+        Left = 113
+        Top = 0
+        Width = 24
+        Height = 46
+        Align = alLeft
+        Caption = '(0/0)'
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = 5066061
+        Font.Height = -11
+        Font.Name = 'Tahoma'
+        Font.Style = []
+        ParentFont = False
+        Layout = tlCenter
+        ExplicitLeft = 399
+        ExplicitTop = 1
+        ExplicitHeight = 13
+      end
+      object shPage: TShape
+        Left = 77
+        Top = 32
+        Width = 31
+        Height = 1
+        Brush.Style = bsClear
+        Pen.Color = 13355979
+      end
+      object edPage: TEdit
+        AlignWithMargins = True
+        Left = 74
+        Top = 16
+        Width = 33
+        Height = 14
+        Margins.Left = 6
+        Margins.Top = 16
+        Margins.Right = 6
+        Margins.Bottom = 16
+        TabStop = False
+        Align = alLeft
+        Alignment = taCenter
+        BorderStyle = bsNone
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = 5066061
+        Font.Height = -11
+        Font.Name = 'Tahoma'
+        Font.Style = []
+        ParentColor = True
+        ParentFont = False
+        TabOrder = 0
+        Text = '0'
+        OnExit = edPageExit
+        OnKeyDown = edPageKeyDown
+        ExplicitLeft = 289
+        ExplicitTop = 17
+      end
     end
   end
   object MainMenu1: TMainMenu

@@ -8,6 +8,6 @@ it's a Release version of the provided source code compiled with Delphi Tokyo 10
 
 ## About libPDFium.DLL
 
-libPDFium is my own build of PDFium as a DLL with the current (30/11/2018) source code of PDFium
+libPDFium is my own build of PDFium as a DLL with the current source code of PDFium
 
 More info on PDFium on [googlesource.com](https://pdfium.googlesource.com/pdfium/)
