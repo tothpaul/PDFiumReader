@@ -12,4 +12,6 @@ pdf_is_standalone = true
 pdf_enable_xfa = false
 pdf_enable_v8 = false
 is_component_build = false
+
+# default x64
 target_cpu = "x86"

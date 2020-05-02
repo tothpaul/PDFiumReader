@@ -12,16 +12,24 @@
 //#define TRACE
 #ifdef TRACE
 #include <stdio.h>
-HANDLE console;
 DWORD wOut;
-#define CONSOLE AllocConsole(); console = GetStdHandle(STD_OUTPUT_HANDLE);
-#define LOG(s) WriteConsoleA(console, s, strlen(s), &wOut, 0);
-#define REF(i) if (!i || !*i || (i != &(*i)->Reference)) LOG("Invalid Interface !!!\n")
+#define LOG(s)                                                              \
+  {                                                                         \
+    AllocConsole();                                                         \
+    WriteConsoleA(GetStdHandle(STD_OUTPUT_HANDLE), s, strlen(s), &wOut, 0); \
+  }
+#define REF(i)                                      \
+  if (i == 0 /*|| !*i || (*i != (*i)->Reference)*/) \
+    LOG("NULL Interface !!!\n")                     \
+  if (*i == 0)                                      \
+    LOG("NULL Reference !!!\n")                     \
+  if (*i != (*i)->Reference)                        \
+    LOG("INVALID Reference\n")                      \
+  if (!(*i)->Handle)                                \
+  LOG("INVALID HANDLE\n")
 #else
-#define CONSOLE
 #define LOG(s)
 #define REF(i)
-
 #endif
 
 // DLL Main
@@ -44,7 +52,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 
 // dummy QueryInterface
 
-int __stdcall QueryInterface(void *self, void *rrid, void *out) {
+int WINAPI QueryInterface(void *self, void *rrid, void *out) {
   LOG("QueryInterface\n")
   return 0x80004001; // E_NOTIMPL
 }
@@ -63,7 +71,7 @@ int WINAPI PDFText_Free(IPDFText text);
 
 // IPDFAnnotation
 
-int __stdcall PDFAnnotation_AddRef(IPDFAnnotation annotation) {
+int WINAPI PDFAnnotation_AddRef(IPDFAnnotation annotation) {
   LOG("PDFAnnotation_AddRef\n")
   REF(annotation)
   return ++(*annotation)->RefCount;
@@ -84,31 +92,31 @@ int WINAPI PDFAnnotation_Free(IPDFAnnotation annotation) {
 }
 
 int WINAPI PDFAnnotation_GetSubtype(IPDFAnnotation annotation) {
-  LOG("PDFAnnotation_GetSubtype")
+  LOG("PDFAnnotation_GetSubtype\n")
   REF(annotation)
   return FPDFAnnot_GetSubtype((*annotation)->Handle);
 }
 
 int WINAPI PDFAnnotation_GetRect(IPDFAnnotation annotation, TRectF *rect) {
-  LOG("PDFAnnotation_GetRect")
+  LOG("PDFAnnotation_GetRect\n")
   REF(annotation)
   return FPDFAnnot_GetRect((*annotation)->Handle, (FS_LPRECTF)rect);
 }
 
 int WINAPI PDFAnnotation_SetRect(IPDFAnnotation annotation, TRectF *rect) {
-  LOG("PDFAnnotation_SetRect")
+  LOG("PDFAnnotation_SetRect\n")
   REF(annotation)
   return FPDFAnnot_SetRect((*annotation)->Handle, (FS_LPRECTF)rect);
 }
 
 int WINAPI PDFAnnotation_GetString(IPDFAnnotation annotation, const char *key, char *str, int size) {
-  LOG("PDFAnnotation_GetString")
+  LOG("PDFAnnotation_GetString\n")
   REF(annotation)
   return FPDFAnnot_GetStringValue((*annotation)->Handle, key, (unsigned short *)str, size);
 }
 
 int WINAPI PDFAnnotation_Remove(IPDFAnnotation annotation) {
-  LOG("PDFAnnotation_Remove")
+  LOG("PDFAnnotation_Remove\n")
   REF(annotation)
   if (!(*annotation)->Handle) return 0;
   FPDFPage_CloseAnnot((*annotation)->Handle);
@@ -118,7 +126,7 @@ int WINAPI PDFAnnotation_Remove(IPDFAnnotation annotation) {
 
 // IPDFText
 
-int _stdcall PDFText_AddRef(IPDFText text) {
+int WINAPI PDFText_AddRef(IPDFText text) {
   LOG("PDFText_AddRef\n")
   REF(text)
   return ++(*text)->RefCount;
@@ -164,7 +172,7 @@ int WINAPI PDFText_GetRect(IPDFText text, int Index, TRectD *rect) {
 
 // IPDFPage
 
-int __stdcall PDFPage_AddRef(IPDFPage page) {
+int WINAPI PDFPage_AddRef(IPDFPage page) {
   LOG("PDFPage_AddRef\n")
   REF(page)
   return ++(*page)->RefCount;
@@ -395,8 +403,9 @@ int WINAPI PDF_SaveToStream(IPDFium pdf, IStream stream) {
   WS.FW.version = 1;
   WS.FW.WriteBlock = WriteStream;
   WS.Stream = stream;
-  return FPDF_SaveAsCopy((*pdf)->Handle, &WS.FW, 0);
+  int ret = FPDF_SaveAsCopy((*pdf)->Handle, &WS.FW, 0);
   (*stream)->Release(stream);
+  return ret;
 }
 
 typedef struct {
@@ -423,7 +432,6 @@ int WINAPI PDF_SaveToProc(IPDFium pdf, TWriteProc writeProc, void *userData) {
 int initialized = 0;
 
 int WINAPI PDF_Create(int RequestedVersion, IPDFium* pdf) {
-  CONSOLE;
   LOG("PDF_Create\n")
   if (RequestedVersion != 1) return -1;
   if (!initialized) {

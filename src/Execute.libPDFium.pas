@@ -12,7 +12,8 @@ interface
 
 uses
   Winapi.Windows,
-  Winapi.ActiveX;
+  Winapi.ActiveX,
+  System.Math;
 
 type
   // One point is 1/72 inch (around 0.3528 mm).
@@ -71,7 +72,11 @@ type
   end;
 
 const
+{$IFDEF WIN64}
+  libpdfium = 'libpdfiumx64.dll';
+{$ELSE}
   libpdfium = 'libpdfium.dll';
+{$ENDIF}
 
   FPDF_ERR_SUCCESS  = 0;    // No error.
   FPDF_ERR_UNKNOWN  = 1;    // Unknown error.
@@ -130,4 +135,8 @@ function PDF_Create(RequestedVersion: Integer; out PDF: IPDFium): Integer; stdca
 
 implementation
 
+{$IFDEF WIN64}
+initialization
+  SetExceptionMask(exAllArithmeticExceptions);
+{$ENDIF}
 end.

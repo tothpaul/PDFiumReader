@@ -1,8 +1,8 @@
-# libPDFium (c)2018 Execute SARL
+# libPDFium (c)2018-2020 Execute SARL
 
 A PDFium Library designed for Delphi, by a Delphi developper.
 
-it's a x86 Windows library that can be used by any langage afterall
+it's a x86/x64 Windows library that can be used by any langage afterall
 
 to get a IPDFium object, just call
 ```
@@ -31,6 +31,7 @@ install [depot_tools](https://www.chromium.org/developers/how-tos/depottools)
 ````
  set path=%path%;<depot_tools_directory>
  set DEPOT_TOOLS_WIN_TOOLCHAIN=0
+ set GCLIENT_PY3=0
 ````
 download PDFium source code
 ````
@@ -66,6 +67,9 @@ group("pdfium_all") {
  gn gen out --ide=vs
 ````
 copy "out/args.gn" into "pdfium/out/args.gn"
+
+you can change options in args.gn (debug/release, x86/x64), then
+
 ```` 
  gn gen out --ide=vs
  ninja -C out libpdfium
