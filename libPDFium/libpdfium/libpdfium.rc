@@ -1,0 +1,22 @@
+1 VERSIONINFO
+FILEVERSION 2020,6,16,1208
+PRODUCTVERSION 1,0,1,0
+FILETYPE 1 {
+    BLOCK "StringFileInfo"
+    {
+        BLOCK "040C04E4"
+        {
+            VALUE "CompanyName",        "Execute SARL\0"
+            VALUE "FileDescription",    "libPDFium a COM wrapper for Google's PDFium\0"
+            VALUE "FileVersion",        "2020.06.16.1\0"
+            VALUE "LegalCopyright",     "(c)2018-2020 Execute SARL. All Rights Reserved\0"
+            VALUE "OriginalFilename",   "libPDFium.dll\0"
+            VALUE "ProductName",        "libPDFium\0"
+            VALUE "ProductVersion",     "1.0.1.0\0"
+        }
+    }
+    BLOCK "VarFileInfo"
+    {
+        VALUE "Translation", 0x40C, 0x04E4
+    }
+}
