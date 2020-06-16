@@ -5,6 +5,7 @@ shared_library("libpdfium") {
     "libpdfium.h",
     "libpdfium.def",
     "libpdfium.cc",
+    "libpdfium.rc"
   ]
   defines = [
     "PNG_PREFIX",

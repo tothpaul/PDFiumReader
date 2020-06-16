@@ -24,7 +24,10 @@ I'm not a C developper, if you need a libpdfium.lib, sorry you'll have to do it 
 
 I know, libpdfium.h exposes the internal members of my objects, but it's not my purpose to use this library from a C project, only from a Delphi one, so I don't care.
 
-BTW if you know how to add a version.rc file to this project, let me know :)
+I've found how to install rc.exe so I can compile libpdfium.rc !
+````
+ third_party/depot_tools/download_from_google_storage.bat -s build/toolchain/win/rc/win/rc.exe.sha1 --bucket chromium-browser-clang/rc
+````
 
 ## Requirements to recompile libPDFium
 install [depot_tools](https://www.chromium.org/developers/how-tos/depottools)

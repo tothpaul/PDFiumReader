@@ -28,6 +28,8 @@ type
     procedure Pipe(x: Integer);
     procedure Prev(x: Integer);
     procedure Next(x: Integer);
+    procedure Print(x: Integer);
+    procedure FixPrint(x: Integer);
   end;
 
 procedure AntiAliaze(Bmp: TBitmap);
@@ -91,6 +93,7 @@ begin
   FixContinus(6 * 24 + x);
   FixFullPage(8 * 24 + x);
   FixActualSize(10 * 24 + x);
+  FixPrint(18 * 24 + x);
 end;
 
 procedure TCanvasHelper.FixContinus(x: Integer);
@@ -149,6 +152,14 @@ begin
   LineTo(x, 12);
   MoveTo(x, 13);
   LineTo(x, 16);
+end;
+
+procedure TCanvasHelper.FixPrint(x: Integer);
+begin
+  MoveTo(x +  7, 17);
+  LineTo(x + 15, 17);
+  MoveTo(x +  7, 19);
+  LineTo(x + 15, 19);
 end;
 
 procedure TCanvasHelper.Folder(x: Integer);
@@ -285,6 +296,15 @@ begin
   LineTo(x + 24 + 8, 14 + 8);
 end;
 
+procedure TCanvasHelper.Print(x: Integer);
+begin
+  Rectangle(x + 8,  6, x + 37, 47);
+  Brush.Color := Pen.Color;
+  Rectangle(x +  4, 20, x + 41, 30);
+  Rectangle(x +  4, 18, x +  8, 35);
+  Rectangle(x + 37, 18, x + 41, 35);
+end;
+
 procedure TCanvasHelper.DrawButtons(x: Integer; Color: TColor);
 begin
   Pen.Color := Color;
@@ -297,6 +317,7 @@ begin
   About(12 * 48 + x);
   Prev(14 * 48 + x);
   Next(16 * 48 + x);
+  Print(18 * 48 + x);
 end;
 
 end.

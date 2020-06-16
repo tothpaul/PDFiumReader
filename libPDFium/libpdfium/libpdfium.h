@@ -11,6 +11,8 @@ typedef long ULONG;
 typedef int HDC;
 #endif
 
+#define PDFIUM_VERSION 2
+
 typedef int (__stdcall *TWriteProc)(const void *data, int size, void *UserData);
 
 typedef struct TStream TStream;
@@ -118,6 +120,7 @@ struct TPDFPage {
   int(__stdcall *GetText)(IPDFPage page, IPDFText *text);
   void(__stdcall *DeviveToPage)(IPDFPage page, TRect *rect, int x, int y, double *px, double *py);
   void(__stdcall *PageToDevice)(IPDFPage page, TRect *rect, double px, double py, int *x, int *y);
+	int(__stdcall *GetRotation)(IPDFPage page);
 // Internal
   PPDFPage Reference;
   int RefCount;
@@ -174,6 +177,7 @@ int __stdcall PDFPage_GetAnnotation(IPDFPage page, int annotation_index, IPDFAnn
 int __stdcall PDFPage_GetText(IPDFPage page, IPDFText *text);
 void __stdcall PDFPage_DeviveToPage(IPDFPage page, TRect *rect, int x, int y, double *px, double *py);
 void __stdcall PDFPage_PageToDevice(IPDFPage page, TRect *rect, double px, double py, int *x, int *y);
+int __stdcall PDFPage_GetRotation(IPDFPage page);
 
 int __stdcall PDFText_Free(IPDFText text);
 int __stdcall PDFText_CharCount(IPDFText text);

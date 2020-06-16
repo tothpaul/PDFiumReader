@@ -33,9 +33,9 @@ object MainForm: TMainForm
     ParentDoubleBuffered = False
     TabOrder = 0
     OnResize = PDFiumResize
-    ExplicitTop = 50
-    ExplicitWidth = 548
-    ExplicitHeight = 438
+    ExplicitTop = 48
+    ExplicitWidth = 608
+    ExplicitHeight = 506
   end
   object pnButtons: TPanel
     Left = 0
@@ -49,12 +49,10 @@ object MainForm: TMainForm
     ShowCaption = False
     ShowHint = True
     TabOrder = 1
-    ExplicitTop = -6
-    ExplicitWidth = 548
     object btZPlus: TPaintBox
       Tag = 4
       AlignWithMargins = True
-      Left = 74
+      Left = 108
       Top = 12
       Width = 24
       Height = 24
@@ -74,7 +72,7 @@ object MainForm: TMainForm
     object btZMinus: TPaintBox
       Tag = 2
       AlignWithMargins = True
-      Left = 40
+      Left = 74
       Top = 12
       Width = 24
       Height = 24
@@ -113,7 +111,7 @@ object MainForm: TMainForm
     end
     object pbZoom: TPaintBox
       AlignWithMargins = True
-      Left = 106
+      Left = 140
       Top = 10
       Width = 72
       Height = 28
@@ -125,11 +123,12 @@ object MainForm: TMainForm
       OnMouseEnter = ButtonMouseEnter
       OnMouseLeave = ButtonMouseLeave
       OnPaint = pbZoomPaint
+      ExplicitLeft = 106
     end
     object btPageWidth: TPaintBox
       Tag = 6
       AlignWithMargins = True
-      Left = 254
+      Left = 288
       Top = 12
       Width = 24
       Height = 24
@@ -150,7 +149,7 @@ object MainForm: TMainForm
     object btFullPage: TPaintBox
       Tag = 8
       AlignWithMargins = True
-      Left = 220
+      Left = 254
       Top = 12
       Width = 24
       Height = 24
@@ -165,12 +164,13 @@ object MainForm: TMainForm
       OnMouseEnter = ButtonMouseEnter
       OnMouseLeave = ButtonMouseLeave
       OnPaint = ButtonPaint
+      ExplicitLeft = 220
       ExplicitTop = 10
     end
     object btActualSize: TPaintBox
       Tag = 10
       AlignWithMargins = True
-      Left = 186
+      Left = 220
       Top = 12
       Width = 24
       Height = 24
@@ -185,6 +185,7 @@ object MainForm: TMainForm
       OnMouseEnter = ButtonMouseEnter
       OnMouseLeave = ButtonMouseLeave
       OnPaint = ButtonPaint
+      ExplicitLeft = 186
       ExplicitTop = 10
     end
     object btAbout: TPaintBox
@@ -207,8 +208,29 @@ object MainForm: TMainForm
       ExplicitLeft = 338
       ExplicitTop = 24
     end
+    object btPrint: TPaintBox
+      Tag = 18
+      AlignWithMargins = True
+      Left = 40
+      Top = 12
+      Width = 24
+      Height = 24
+      Hint = 'Print'
+      Margins.Left = 5
+      Margins.Top = 11
+      Margins.Right = 5
+      Margins.Bottom = 11
+      Align = alLeft
+      OnClick = btPrintClick
+      OnMouseEnter = ButtonMouseEnter
+      OnMouseLeave = ButtonMouseLeave
+      OnPaint = ButtonPaint
+      ExplicitLeft = 1
+      ExplicitTop = 1
+      ExplicitHeight = 46
+    end
     object pnPages: TPanel
-      Left = 283
+      Left = 317
       Top = 1
       Width = 158
       Height = 46
@@ -221,6 +243,7 @@ object MainForm: TMainForm
       TabOrder = 0
       Visible = False
       OnResize = pnPagesResize
+      ExplicitLeft = 283
       object btNext: TPaintBox
         Tag = 16
         AlignWithMargins = True
@@ -276,8 +299,6 @@ object MainForm: TMainForm
         Font.Style = []
         ParentFont = False
         Layout = tlCenter
-        ExplicitLeft = 399
-        ExplicitTop = 1
         ExplicitHeight = 13
       end
       object shPage: TShape
@@ -313,8 +334,6 @@ object MainForm: TMainForm
         Text = '0'
         OnExit = edPageExit
         OnKeyDown = edPageKeyDown
-        ExplicitLeft = 289
-        ExplicitTop = 17
       end
     end
   end
@@ -339,6 +358,14 @@ object MainForm: TMainForm
         Caption = '&Quit'
         ShortCut = 16465
         OnClick = Quit1Click
+      end
+    end
+    object Edit1: TMenuItem
+      Caption = 'Edit'
+      object Copy1: TMenuItem
+        Caption = 'Copy'
+        ShortCut = 16451
+        OnClick = Copy1Click
       end
     end
   end

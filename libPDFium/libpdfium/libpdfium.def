@@ -21,6 +21,7 @@ EXPORTS
 	PDFPage_GetText
 	PDFPage_DeviveToPage
 	PDFPage_PageToDevice
+	PDFPage_GetRotation
 	PDFText_Free
 	PDFText_CharCount
 	PDFText_GetText

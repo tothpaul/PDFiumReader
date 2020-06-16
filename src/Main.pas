@@ -15,8 +15,9 @@ uses
   System.SysUtils, System.Variants, System.Classes,
 
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.Menus, Vcl.ExtCtrls,
+  Vcl.Clipbrd, Vcl.StdCtrls,
 
-  PDFium.Frame, Vcl.StdCtrls;
+  PDFium.Frame;
 
 type
   TMainForm = class(TForm)
@@ -61,6 +62,9 @@ type
     lbPages: TLabel;
     shPage: TShape;
     pnPages: TPanel;
+    Edit1: TMenuItem;
+    Copy1: TMenuItem;
+    btPrint: TPaintBox;
     procedure Open1Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -85,6 +89,8 @@ type
     procedure btNextClick(Sender: TObject);
     procedure edPageExit(Sender: TObject);
     procedure edPageKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure Copy1Click(Sender: TObject);
+    procedure btPrintClick(Sender: TObject);
   private
     { Déclarations privées }
     FButtons  : TBitmap;
@@ -187,6 +193,11 @@ begin
   PDFium.PrevPage;
 end;
 
+procedure TMainForm.btPrintClick(Sender: TObject);
+begin
+  PDFium.Print();
+end;
+
 procedure TMainForm.btZPlusClick(Sender: TObject);
 var
   Zoom : Integer;
@@ -242,10 +253,15 @@ begin
   PDFium.CloseDocument;
 end;
 
+procedure TMainForm.Copy1Click(Sender: TObject);
+begin
+  Clipboard.AsText := PDFium.GetSelectionText;
+end;
+
 procedure TMainForm.CreateButtons;
 begin
   FButtons.PixelFormat := pf32Bit;
-  FButtons.SetSize(2 * 2 * 9 * 24, 2 * 24);
+  FButtons.SetSize(2 * 2 * 10 * 24, 2 * 24);
   with FButtons.Canvas do
   begin
     Brush.Color := clBtnFace;

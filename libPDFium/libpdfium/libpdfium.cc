@@ -4,6 +4,7 @@
 #include "public/fpdf_annot.h"
 #include "public/fpdf_text.h"
 #include "public/fpdf_save.h"
+#include "public/fpdf_edit.h"
 
 #include "libpdfium.h"
 
@@ -277,6 +278,12 @@ void WINAPI PDFPage_PageToDevice(IPDFPage page, TRect *rect, double px, double p
   FPDF_PageToDevice((*page)->Handle, rect->Left, rect->Top, rect->Right - rect->Left, rect->Bottom - rect->Top, 0, px, py, x, y);
 }
 
+int WINAPI PDFPage_GetRotation(IPDFPage page) {
+  LOG("PDFPage_GetRotation\n")
+  REF(page)
+  return FPDFPage_GetRotation((*page)->Handle);
+}
+
 // IPDFium
 
 int __stdcall PDF_AddRef(IPDFium pdf) {
@@ -307,7 +314,7 @@ int WINAPI PDF_GetVersion(IPDFium pdf) {
 int WINAPI PDF_GetError(IPDFium pdf) {
   LOG("PDF_GetError\n")
   REF(pdf)
-  return (int)FPDF_GetLastError;
+  return (int)FPDF_GetLastError();
 }
 
 int WINAPI PDF_CloseDocument(IPDFium pdf) {
@@ -323,7 +330,7 @@ int WINAPI PDF_LoadFromFile(IPDFium pdf, char* filename, char* pwd) {
   REF(pdf)
   if ((*pdf)->Handle) FPDF_CloseDocument((*pdf)->Handle);
   (*pdf)->Handle = FPDF_LoadDocument(filename, pwd);
-  return (*pdf)->Handle ? 0 : (int)FPDF_GetLastError;
+  return (*pdf)->Handle ? 0 : (int)FPDF_GetLastError();
 }
 
 int WINAPI PDF_LoadFromMemory(IPDFium pdf, void* data, int size, char* pwd) {
@@ -331,7 +338,7 @@ int WINAPI PDF_LoadFromMemory(IPDFium pdf, void* data, int size, char* pwd) {
   REF(pdf)	
   if ((*pdf)->Handle) FPDF_CloseDocument((*pdf)->Handle);
   (*pdf)->Handle = FPDF_LoadMemDocument(data, size, pwd);
-  return (*pdf)->Handle ? 0 : (int)FPDF_GetLastError;
+  return (*pdf)->Handle ? 0 : (int)FPDF_GetLastError();
 }
 
 long WINAPI PDF_GetPermissions(IPDFium pdf) {
@@ -376,6 +383,7 @@ int WINAPI PDF_GetPage(IPDFium pdf, int page_index, IPDFPage* page) {
     PDFPage->GetText = PDFPage_GetText;
     PDFPage->DeviveToPage = PDFPage_DeviveToPage;
     PDFPage->PageToDevice = PDFPage_PageToDevice;
+		PDFPage->GetRotation = PDFPage_GetRotation;
   // Result
     *page = &PDFPage->Reference;
     return 0;
@@ -433,7 +441,7 @@ int initialized = 0;
 
 int WINAPI PDF_Create(int RequestedVersion, IPDFium* pdf) {
   LOG("PDF_Create\n")
-  if (RequestedVersion != 1) return -1;
+  if (RequestedVersion != PDFIUM_VERSION) return -1;
   if (!initialized) {
     LOG("Initialization\n")
     initialized = 1;

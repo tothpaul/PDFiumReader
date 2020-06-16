@@ -1,7 +1,7 @@
 unit Execute.libPDFium;
 
 {
-   libPDFium.dll (c)2017-2018 by Execute SARL
+   libPDFium.dll (c)2017-2020 by Execute SARL
    http://www.execute.fr
    https://github.com/tothpaul/PDFiumReader
 }
@@ -14,6 +14,9 @@ uses
   Winapi.Windows,
   Winapi.ActiveX,
   System.Math;
+
+const
+  PDFIUM_VERSION = 2;
 
 type
   // One point is 1/72 inch (around 0.3528 mm).
@@ -53,6 +56,7 @@ type
     function GetText(var Text: IPDFText): Integer; stdcall;
     procedure DeviceToPage(const Rect: TRect; x, y: Integer; var px, py: Double); stdcall;
     procedure PageToDevice(const Rect: TRect; px, py: Double; var x, y: Integer); stdcall;
+    function GetRotation: Integer; stdcall;
   end;
 
   TWriteProc = function(Data: Pointer; Size: Integer; UserData: Pointer): Integer; stdcall;

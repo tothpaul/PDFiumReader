@@ -27,6 +27,28 @@ const
   PAGE_MARGIN = 5;  // pixels
 
 type
+  TPDFPrintOptions = record
+    PageNumber: Integer; // Index dans Pages[]
+    PageCount: Integer;
+    Pages: TArray<Integer>;
+    PageType: Integer; // 0 = Tout, 1 = Impaires, 2 = Paires
+    PageSize: Integer; // 0 = Ajuster, 1 = Taille réelle, 2 = Auto, 3 = Echelle
+    PageScale: Single; // Mise à l'échelle de la page
+    Orientation: Integer; // 0 = Auto, 1 = Portrait, 2 = Paysage
+    Rotation: Integer; // 1 si l'apperçu est horizontal (il faut faire une rotation à l'impression)
+    PaperWidth: Integer; // 1/10 de mm
+    PaperHeight: Integer; // 1/10 de mm
+    GrayScale: Boolean;
+    Center: Boolean;
+    Annotations: Boolean;
+    // Impression multipage
+    PagePerSheet: Integer;
+    PageOrder: Integer; // 0 = Horizontal, 1 = Horizontal inversé, 2 = Vertical, 3 = Vertical Inversé
+    PageContour: Boolean;
+    procedure AddPages(Start, Stop: Integer);
+    function CurrentPage: Integer;
+  end;
+
   TZoomMode = (
     zmCustom,
     zmActualSize,
@@ -55,6 +77,7 @@ type
         function Select(Start: Integer): Boolean;
         function SelectTo(Stop: Integer): Boolean;
         function ClearSelection: Boolean;
+        procedure Paint(DC: HDC);
         procedure DrawSelection(DC, BMP: HDC; const Blend: TBlendFunction; const Client: TRect);
       end;
 
@@ -105,6 +128,11 @@ type
       MousePos: TPoint): Boolean; override;
     procedure MouseMove(Shift: TShiftState; X, Y: Integer); override;
     function GetPageTop(Index: Integer): Integer;
+    function GetPageNumber: Integer;
+    procedure SetPageNumber(Value: Integer);
+    function GetPageY(PageIndex: Integer): Integer;
+    function PageToScreen(Value: Single): Integer; inline;
+    function ScaleToScreen: Single;
   public
     { Déclarations publiques }
     constructor Create(AOwner: TComponent); override;
@@ -120,8 +148,15 @@ type
     procedure NextPage;
     procedure PrevPage;
     procedure GoPage(Index: Integer);
+    procedure Print;
+    procedure PrintPreview(Canvas: TCanvas; const ARect: TRect; const Options: TPDFPrintOptions; ScaleX, ScaleY: Single; Printer: Boolean);
+    function PageWidth(PageNumber: Integer): Double;
+    function PageHeight(PageNumber: Integer): Double;
+    function IsLandscape(PageNumber: Integer): Boolean;
+    function GetSelectionText: string;
     property PageIndex: Integer read FPageIndex;
     property PageCount: Integer read FPageCount;
+    property PageNumber: Integer read GetPageNumber write SetPageNumber;
     property Zoom: Single read FZoom write SetZoom;
     property ZoomMode: TZoomMode read FZoomMode write SetZoomMode;
     property OnPaint: TNotifyEvent read FOnPaint write FOnPaint;
@@ -131,8 +166,46 @@ implementation
 
 {$R *.dfm}
 
+uses PDFium.PrintDlg;
+
 resourcestring
   sUnableToLoadPDFium = 'Unable to load libPDFium.dll';
+
+procedure TPDFPrintOptions.AddPages(Start, Stop: Integer);
+var
+  Count: Integer;
+  Len: Integer;
+  Index: Integer;
+begin
+  if Stop > PageCount then
+    Stop := PageCount;
+  if Start < 0 then
+    Start := 1;
+  Count := Stop - Start + 1;
+  if Count < 0 then
+    Exit;
+  Len := Length(Pages);
+  SetLength(Pages, Len + Count);
+  for Index := 0 to Count - 1 do
+  begin
+    if (PageType = 0) or ((PageType = 1) = Odd(Start)) then
+    begin
+      Pages[Len] := Start;
+      Inc(Len);
+    end;
+    Inc(Start);
+  end;
+  SetLength(Pages, Len);
+end;
+
+function TPDFPrintOptions.CurrentPage: Integer;
+begin
+  if (PageNumber > 0) and (PageNumber <= Length(Pages)) then
+    Result := Pages[PageNumber - 1]
+  else
+    Result := 0;
+end;
+
 
 { TPDFiumFrame.TPDFPage }
 
@@ -144,6 +217,22 @@ begin
     NoText := Text = nil;
   end;
   Result := not NoText;
+end;
+
+procedure TPDFiumFrame.TPDFPage.Paint(DC: HDC);
+var
+  R: TRect;
+  P: TPoint;
+begin
+  if (Rect.Left <> 0) or (Rect.Top <> 0) then
+  begin
+    R := TRect.Create(0, 0, Rect.Width, Rect.Height);
+    SetViewportOrgEx(DC, Rect.Left, Rect.Top, @P);
+    Handle.Render(DC, R, 0, FPDF_ANNOT);
+    SetViewportOrgEx(DC, P.X, P.Y, nil);
+  end else begin
+    Handle.Render(DC, Rect, 0, FPDF_ANNOT);
+  end;
 end;
 
 function TPDFiumFrame.TPDFPage.CharCount: Integer;
@@ -261,7 +350,7 @@ begin
 
   FPages := TList.Create;
   try
-    PDF_Create(1, FPDF);
+    PDF_Create(PDFIUM_VERSION, FPDF);
   except
     FStatus := TLabel.Create(Self);
     FStatus.Align := alClient;
@@ -289,10 +378,19 @@ end;
 procedure TPDFiumFrame.LoadFromFile(const AFileName: string);
 var
   AnsiName: AnsiString;
+  Password: string;
+  AnsiPwd : AnsiString;
 begin
   AnsiName := AnsiString(AFileName);
   ClearPages;
   FError := FPDF.LoadFromFile(PAnsiChar(AnsiName), nil);
+  while FError = FPDF_ERR_PASSWORD do
+  begin
+    if InputQuery('PDFium', 'Password', Password) = False then
+      Break;
+    AnsiPwd := AnsiString(Password);
+    FError := FPDF.LoadFromFile(PAnsiChar(AnsiName), PAnsiChar(AnsiPwd));
+  end;
   OnLoad;
 end;
 
@@ -324,9 +422,16 @@ end;
 procedure TPDFiumFrame.OnLoad;
 begin
   if FError = 0 then
-    SetPageCount(FPDF.GetPageCount);
+    SetPageCount(FPDF.GetPageCount)
+  else
+    SetPageCount(0);
   FReload := True;
   Invalidate;
+end;
+
+function TPDFiumFrame.ScaleToScreen: Single;
+begin
+  Result := FZoom / 100 * Screen.PixelsPerInch / 72;
 end;
 
 procedure TPDFiumFrame.SetPageCount(Value: Integer);
@@ -351,6 +456,17 @@ begin
   HorzScrollBar.Position := 0;
   VertScrollBar.Position := 0;
   SetScrollSize;
+end;
+
+procedure TPDFiumFrame.SetPageNumber(Value: Integer);
+begin
+  Dec(Value);
+  if (Value >= 0) and (Value < FPageCount) and (FPageIndex <> Value) then
+  begin
+    FPageIndex := Value;
+    FReload := True;
+    VertScrollBar.Position := GetPageY(FPageIndex);
+  end;
 end;
 
 procedure TPDFiumFrame.SetScrollSize;
@@ -396,6 +512,7 @@ procedure TPDFiumFrame.ClearPages;
 var
   Index: Integer;
 begin
+  FCurPage := nil;
   for Index := 0 to FPages.Count - 1 do
     TPDFPage(FPages[Index]).Free;
   FPages.Clear;
@@ -455,6 +572,11 @@ begin
   Result := nil;
 end;
 
+function TPDFiumFrame.GetPageNumber: Integer;
+begin
+  Result := FPageIndex + 1;
+end;
+
 function TPDFiumFrame.GetPageTop(Index: Integer): Integer;
 var
   PageTop: Single;
@@ -467,6 +589,45 @@ begin
     PageTop := PageTop + FPageSize[Index].cy;
   end;
   Inc(Result, Round(PageTop * FZoom / 100 * Screen.PixelsPerInch / 72));
+end;
+
+function TPDFiumFrame.GetPageY(PageIndex: Integer): Integer;
+var
+  y: Double;
+begin
+  Result := PageIndex * PAGE_MARGIN;
+  y := 0;
+  while PageIndex > 0 do
+  begin
+    Dec(PageIndex);
+    y := y + FPageSize[PageIndex].cy;
+  end;
+  Inc(Result, PageToScreen(y));
+end;
+
+
+function TPDFiumFrame.GetSelectionText: string;
+var
+  Index: Integer;
+  Page: TPDFPage;
+  Count: Integer;
+  SelLen: Integer;
+begin
+  Count := 0;
+  Result := '';
+  for Index := 0 to Pred(FPDF.GetPageCount) do
+  begin
+    Page := GetPage(Index);
+    SelLen := Page.SelStop - Page.SelStart;
+    if SelLen = 0 then
+      Continue;
+    SetLength(Result, Count + Abs(SelLen));
+    if SelLen < 0 then
+      Page.Text.GetText(Page.SelStop, - SelLen, @Result[Count + 1])
+    else
+      Page.Text.GetText(Page.SelStart, SelLen, @Result[Count + 1]);
+    Inc(Count, Abs(SelLen));
+  end;
 end;
 
 procedure TPDFiumFrame.GoPage(Index: Integer);
@@ -487,6 +648,12 @@ begin
   end else begin
   {$IFDEF TRACK_EVENTS}WriteLn('Not invalidated');{$ENDIF}
   end;
+end;
+
+function TPDFiumFrame.IsLandscape(PageNumber: Integer): Boolean;
+begin
+  Result := (PageNumber > 0) and (PageNumber <= Length(FPageSize))
+    and (FPageSize[PageNumber - 1].cx > FPageSize[PageNumber - 1].cy);
 end;
 
 procedure TPDFiumFrame.LoadVisiblePages;
@@ -703,6 +870,14 @@ begin
   ControlState := ControlState - [csCustomPaint];
 end;
 
+function TPDFiumFrame.PageHeight(PageNumber: Integer): Double;
+begin
+  if (PageNumber > 0) and (PageNumber <= Length(FPageSize)) then
+    Result := FPageSize[PageNumber - 1].cy
+  else
+    Result := 1;
+end;
+
 function TPDFiumFrame.PageLevelZoom: Single;
 var
   Scale : Single;
@@ -716,6 +891,19 @@ begin
   if Z1 > Z2 then
     Z1 := Z2;
   Result := 100 * Z1;
+end;
+
+function TPDFiumFrame.PageToScreen(Value: Single): Integer;
+begin
+  Result := Round(Value * ScaleToScreen);
+end;
+
+function TPDFiumFrame.PageWidth(PageNumber: Integer): Double;
+begin
+  if (PageNumber > 0) and (PageNumber <= Length(FPageSize)) then
+    Result := FPageSize[PageNumber - 1].cx
+  else
+    Result := 1;
 end;
 
 function TPDFiumFrame.PageWidthZoom: Single;
@@ -767,7 +955,8 @@ begin
     if Page.Visible > 0 then
     begin
       FillRect(DC, Page.Rect, WHITE);
-      Page.Handle.Render(DC, Page.Rect, 0, FPDF_ANNOT);
+//      Page.Handle.Render(DC, Page.Rect, 0, FPDF_ANNOT);
+      Page.Paint(DC);
       Page.DrawSelection(DC, SelDC, Blend, Client);
     end;
   end;
@@ -789,6 +978,202 @@ end;
 procedure TPDFiumFrame.PrevPage;
 begin
   GoPage(FPageIndex - 1);
+end;
+
+procedure TPDFiumFrame.Print;
+begin
+  TPrintDlg.Execute(Self);
+end;
+
+procedure TPDFiumFrame.PrintPreview(Canvas: TCanvas; const ARect: TRect;
+  const Options: TPDFPrintOptions; ScaleX, ScaleY: Single; Printer: Boolean);
+var
+  n, p: Integer;
+  pn: Integer;
+  pr, pc: Integer;
+  nPage: Integer;
+  iPage: IPDFPage;
+  Rect: TRect;
+  R, c: Integer;
+  Flags: Integer;
+  w, h: Integer;
+  s1, s2: Single;
+  wf, hf: Single;
+  Rotation: Integer;
+  Save: Integer;
+  R2: TRect;
+begin
+  if Length(Options.Pages) = 0 then
+    Exit;
+
+  p := Options.PageNumber - 1;
+
+  case Options.PagePerSheet of
+    1:
+      c := 1;
+    2:
+      c := 2;
+    4:
+      c := 2;
+    6:
+      c := 3;
+    9:
+      c := 3;
+  else//  16:
+      c := 4;
+  end;
+  R := Options.PagePerSheet div c;
+
+  // faire la découpe dans le sens de la longeur
+  if ((c > R) and (ARect.Width < ARect.Height)) or ((R > c) and (ARect.Height < ARect.Width)) then
+  begin
+    w := c;
+    c := R;
+    R := w;
+  end;
+
+  // imprimer toutes les pages
+  for n := 0 to Options.PagePerSheet - 1 do
+  begin
+    // la page à imprimer
+    if Options.PagePerSheet > 1 then
+    begin
+      pr := n div c;
+      pc := n - c * pr;
+      if Options.Rotation = 1 then
+      begin
+        case Options.PageOrder of
+          0:
+            pn := Options.PageNumber - 1 + (c - pc - 1) * (c + 1) + pr; // Horizontal
+          1:
+            pn := Options.PageNumber - 1 + (c - pc - 1) * R + R - pr - 1; // Horizontal inversé
+          2:
+            pn := Options.PageNumber - 1 + pr * c + c - pc - 1; // Vertical
+        else//  3:
+            pn := Options.PageNumber - 1 + pr * c + pc; // Vertical inversé
+        end;
+      end
+      else
+      begin
+        case Options.PageOrder of
+          0:
+            pn := p; // Horizontal
+          1:
+            pn := Options.PageNumber - 1 + pr * c + c - pc - 1; // Horizontal inversé
+          2:
+            pn := Options.PageNumber - 1 + pc * R + pr; // Vertical
+        else//  3:
+            pn := Options.PageNumber - 1 + pc * R + R - pr - 1; // Vertical inversé
+        end;
+      end;
+    end
+    else
+    begin
+      pn := p;
+    end;
+
+    if pn >= Length(Options.Pages) then
+      Continue;
+
+    nPage := Options.Pages[pn] - 1;
+    if (nPage < 0) or (nPage >= Length(FPageSize)) then
+      Continue;
+    FPDF.GetPage(nPage, iPage);
+
+    Inc(p);
+
+    // on part du rectangle donné
+    Rect := ARect;
+    // réduire les dimensions en fonction du nombre de lignes/colonnes
+    Rect.Width := Rect.Width div c;
+    Rect.Height := Rect.Height div R;
+    // déplacer le rectangle sur la page
+    Rect.Offset(Rect.Width * (n mod c), Rect.Height * (n div c));
+
+    // Dimensions de la page à l'écran
+    Rotation := 0;
+    wf := FPageSize[nPage].cx;
+    hf := FPageSize[nPage].cy;
+
+    if (((Options.Orientation = 2) and (Rect.Width < Rect.Height)) or ((Options.Orientation = 0) and ((wf > hf) <> (Rect.Width > Rect.Height)))) then
+    begin
+      wf := hf;
+      hf := FPageSize[nPage].cx;
+      Rotation := iPage.GetRotation;
+      if Rotation = 0 then
+        Rotation := 1 // +90°
+      else
+        Rotation := 3; // -90°
+    end;
+
+    // ne se produit qu'à l'impression, à l'écran c'est l'image qui est tournée
+    if (Options.Rotation = 1) and (Options.Orientation = 1) then
+    begin
+      s1 := hf;
+      hf := wf;
+      wf := s1;
+      if Rotation = 0 then
+        Rotation := 1 // +90°
+      else
+        Rotation := 0;
+    end;
+
+    if Options.PageSize in [0, 2] then
+    begin
+      s1 := Rect.Width / (ScaleX * wf * Options.PageScale);
+      s2 := Rect.Height / (ScaleY * hf * Options.PageScale);
+      if s2 < s1 then
+        s1 := s2;
+      if (Options.PageSize = 2) and (s1 > 1) then
+        s1 := 1;
+      ScaleX := ScaleX * s1;
+      ScaleY := ScaleY * s1;
+    end;
+    w := Round(ScaleX * wf * Options.PageScale);
+    h := Round(ScaleY * hf * Options.PageScale);
+
+    // Center l'impression dans la zone d'impression
+    if Options.Center then
+    begin
+      Inc(Rect.Left, (Rect.Width - w) div 2);
+      Inc(Rect.Top, (Rect.Height - h) div 2);
+    end;
+    Rect.Width := w;
+    Rect.Height := h;
+
+    // bord de la page
+    if Options.PageContour or (not Printer) then
+    begin
+      Rect.Inflate(1, 1);
+      if Options.PageContour then
+      begin
+        Canvas.Pen.Color := clBlack;
+      end
+      else
+      begin
+        Canvas.Pen.Color := clSilver;
+        Canvas.Pen.Style := psDot;
+      end;
+      Canvas.Brush.Style := bsClear;
+      Canvas.Rectangle(Rect);
+      Canvas.Pen.Style := psSolid;
+      Rect.Inflate(-1, -1);
+    end;
+
+    Flags := 0;
+    if Options.GrayScale then
+      Flags := Flags or FPDF_GRAYSCALE;
+    if Options.Annotations then
+      Flags := Flags or FPDF_ANNOT;
+
+    Save := SaveDC(Canvas.Handle);
+    // bug in PDFium
+    R2 := TRect.Create(0, 0, Rect.Width, Rect.Height);
+    SetViewportOrgEx(Canvas.Handle, Rect.Left, Rect.Top, nil);
+    iPage.Render(Canvas.Handle, R2, Rotation, Flags);
+    RestoreDC(Canvas.Handle, Save);
+
+  end;
 end;
 
 procedure TPDFiumFrame.Resize;
