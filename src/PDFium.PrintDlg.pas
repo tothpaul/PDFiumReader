@@ -76,7 +76,6 @@ type
     procedure rbAllPagesClick(Sender: TObject);
     procedure edPagesChange(Sender: TObject);
     procedure cbOddPagesChange(Sender: TObject);
-    procedure cbRectoVersoChange(Sender: TObject);
     procedure rbAutoClick(Sender: TObject);
     procedure cbGrayscaleClick(Sender: TObject);
     procedure cbCenterClick(Sender: TObject);
@@ -433,12 +432,6 @@ begin
   GetPaperSize(Device, Port, DeviceMode);
   GlobalUnlock(HDeviceMode);
   ResizePreview();
-end;
-
-procedure TPrintDlg.cbRectoVersoChange(Sender: TObject);
-begin
-  FOptions.PageOrder := cbPageOrder.ItemIndex;
-  PaintBox.Repaint;
 end;
 
 procedure TPrintDlg.cbSheetsChange(Sender: TObject);

@@ -62,10 +62,10 @@ type
     type
       TPDFPage = class
         Index    : Integer;
-        Handle     : IPDFPage;
+        Handle   : IPDFPage;
         Top      : Double;
         Rect     : TRect;
-        Text       : IPDFText;
+        Text     : IPDFText;
         NoText   : Boolean;
         Visible  : Integer;
         SelStart : Integer;
@@ -363,7 +363,9 @@ end;
 
 destructor TPDFiumFrame.Destroy;
 begin
+  CloseDocument();
   FPages.Free;
+  FSelBmp.Free;
   inherited;
 end;
 
@@ -537,10 +539,16 @@ end;
 
 procedure TPDFiumFrame.CloseDocument;
 begin
-  ClearPages;
-  FPDF.CloseDocument;
-  SetPageCount(0);
-  Invalidate;
+  if FPDF <> nil then
+  begin
+    ClearPages;
+    FPDF.CloseDocument;
+    if not (csDestroying in ComponentState) then
+    begin
+      SetPageCount(0);
+      Invalidate;
+    end;
+  end;
 end;
 
 function TPDFiumFrame.GetPage(PageIndex: Integer): TPDFPage;

@@ -623,7 +623,6 @@ object PrintDlg: TPrintDlg
         ItemIndex = 0
         TabOrder = 0
         Text = 'Off'
-        OnChange = cbRectoVersoChange
         Items.Strings = (
           'Off'
           'Flip on long edge'
