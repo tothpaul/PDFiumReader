@@ -7,7 +7,6 @@ unit Execute.libPDFium;
 }
 {$WARN SYMBOL_PLATFORM OFF}
 
-
 interface
 
 uses
@@ -16,13 +15,27 @@ uses
   System.Math;
 
 const
-  PDFIUM_VERSION = 2;
+  PDFIUM_VERSION = 3;
 
 type
+{.$DEFINE USE_STRINGS} // use 'const AnsiString' instead of 'PAnsiChar' for input parameters
+{$IFDEF USE_STRINGS}
+  TAnsiString = AnsiString;
+  TString = string;
+{$ELSE}
+  TAnsiString = PAnsiChar;
+  TString = PChar;
+{$ENDIF}
+
   // One point is 1/72 inch (around 0.3528 mm).
   TPointsSize = record
     cx : Double;
     cy : Double;
+  end;
+
+  TPointsSizeF = record
+    cx : Single;
+    cy : Single;
   end;
 
   TRectF = record
@@ -33,12 +46,33 @@ type
     Left, Top, Right, Bottom: Double;
   end;
 
+  TPDFBitmapInfo = record
+    Format: Integer;
+    Width : Integer;
+    Height: Integer;
+    Stride: Integer;
+    Buffer: Pointer;
+  end;
+
+  IPDFBookmark = interface
+    function GetPageNumber: Integer; stdcall;
+    function GetTitle(Text: PChar; Size: Integer): Integer; stdcall;
+    function GetFirstChild(out Child: IPDFBookmark): Integer; stdcall;
+    function GetNext: Integer; stdcall;
+  end;
+
   IPDFAnnotation = interface
     function GetSubtype: Integer; stdcall;
     function GetRect(var Rect: TRectF): Integer; stdcall;
     function SetRect(const Rect: TRectF): Integer; stdcall;
-    function GetString(const Key, Str: PChar; Size: Integer): Integer; stdcall;
+    function GetString(const Key: TAnsiString; Str: PChar; Size: Integer): Integer; stdcall;
     function Remove: Integer; stdcall;
+  end;
+
+  IPDFSearchText = interface
+    function FindNext: Integer; stdcall;
+    function FindPrev: Integer; stdcall;
+    function GetPosition(var Start, Length: Integer): Integer; stdcall;
   end;
 
   IPDFText = interface
@@ -47,6 +81,12 @@ type
     function CharIndexAtPos(const Pos: TPointsSize; distance: Integer): Integer; stdcall;
     function GetRectCount(Start, Length: Integer): Integer; stdcall;
     function GetRect(Index: Integer; var Rect: TRectD): Integer; stdcall;
+    function Search(const Text: TString; Flags, StartIndex: Integer; out Search: IPDFSearchText): Integer; stdcall;
+  end;
+
+  IPDFBitmap = interface
+    function Draw(DC: HDC; x, y: Integer): BOOL; stdcall;
+    function GetInfo(var Info: TPDFBitmapInfo): BOOL; stdcall;
   end;
 
   IPDFPage = interface
@@ -57,6 +97,7 @@ type
     procedure DeviceToPage(const Rect: TRect; x, y: Integer; var px, py: Double); stdcall;
     procedure PageToDevice(const Rect: TRect; px, py: Double; var x, y: Integer); stdcall;
     function GetRotation: Integer; stdcall;
+    function GetBitmap(const PageRect, ViewPort: TRect; Rotation, Flags: Integer; out Bitmap: IPDFBitmap): Integer; stdcall;
   end;
 
   TWriteProc = function(Data: Pointer; Size: Integer; UserData: Pointer): Integer; stdcall;
@@ -65,14 +106,16 @@ type
     function GetVersion: Integer; stdcall;
     function GetError: Integer; stdcall;
     function CloseDocument: integer; stdcall;
-    function LoadFromFile(fileName, Password: PAnsiChar): Integer; stdcall;
-    function LoadFromMemory(data: Pointer; Size: Integer; password: PAnsiChar): Integer; stdcall;
+    function LoadFromFile(const FileName, Password: TAnsiString): Integer; stdcall;
+    function LoadFromMemory(data: Pointer; Size: Integer; const password: TAnsiString): Integer; stdcall;
     function GetPermissions: LongWord; stdcall;
     function GetPageCount: Integer; stdcall;
-    function GetPageSize(Index: Integer; var width, height: Double): Integer; stdcall;
+    function GetPageSize(Index: Integer; var Size: TPointsSizeF): Integer; stdcall;
     function GetPage(Index: Integer; out Page: IPDFPage): Integer; stdcall;
     function SaveToStream(Stream: IStream): Integer; stdcall;
     function SaveToProc(WriteProc: TWriteProc; UserData: Pointer): Integer; stdcall;
+    function GetFirstBookmark(out Bookmark: IPDFBookmark): Integer; stdcall;
+    function GetMetaText(const Name: TAnsiString; Value: PChar; ValueSize: Integer): Integer; stdcall;
   end;
 
 const

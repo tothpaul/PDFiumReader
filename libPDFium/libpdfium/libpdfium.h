@@ -1,4 +1,4 @@
-// libdfium v1.0 (c)2018 Execute SARL <contact@execute.fr>
+// libdfium v1.0.2 (c)2018-2021 Execute SARL <contact@execute.fr>
 
 #ifndef PUBLIC_FPDFVIEW_H_
 typedef void *FPDF_DOCUMENT;
@@ -11,9 +11,12 @@ typedef long ULONG;
 typedef int HDC;
 #endif
 
-#define PDFIUM_VERSION 2
+#define PDFIUM_VERSION 3
 
 typedef int (__stdcall *TWriteProc)(const void *data, int size, void *UserData);
+
+typedef char *PAnsiChar;
+typedef unsigned short *PChar;
 
 typedef struct TStream TStream;
 typedef TStream *PStream;
@@ -31,9 +34,29 @@ typedef struct TPDFText TPDFText;
 typedef TPDFText *PPDFText;
 typedef TPDFText **IPDFText;
 
+typedef struct TPDFSearchText TPDFSearchText;
+typedef TPDFSearchText *PPDFSearchText;
+typedef TPDFSearchText **IPDFSearchText;
+
 typedef struct TPDFAnnotation TPDFAnnotation;
 typedef TPDFAnnotation *PPDFAnnotation;
 typedef TPDFAnnotation **IPDFAnnotation;
+
+typedef struct TPDFBookmark TPDFBookmark;
+typedef TPDFBookmark *PPDFBookmark;
+typedef TPDFBookmark **IPDFBookmark;
+
+typedef struct TPDFBitmap TPDFBitmap;
+typedef TPDFBitmap *PPDFBitmap;
+typedef TPDFBitmap **IPDFBitmap;
+
+typedef struct {
+  int Format;
+  int Width;
+  int Height;
+  int Stride;
+  void* Buffer;
+} TPDFBitmapInfo;
 
 typedef struct {
   int Left;
@@ -61,6 +84,11 @@ typedef struct {
   double cy;
 } TPointsSize;
 
+typedef struct {
+  float cx;
+  float cy;
+} TPointsSizeF;
+
 struct TStream {
 // IUnknown
   int(__stdcall *QueryInterface)(void *intf, void *rrid, void*);
@@ -69,6 +97,37 @@ struct TStream {
 // ISequentialStream
   int(__stdcall *Read)(IStream stream, const void *pv, ULONG cb, ULONG *pcbRead);
   int(__stdcall *Write)(IStream stream, const void *pv, ULONG cb, ULONG *pcbWritten);
+};
+
+struct TPDFBitmap {
+// IUnknwon
+	int(__stdcall *QueryInterface)(void *intf, void *rrid, void*);
+	int(__stdcall *AddRef)(IPDFBitmap bitmap);
+	int(__stdcall *Release)(IPDFBitmap bitmap);
+// IDPFBitmap
+	int(__stdcall *Draw)(IPDFBitmap bitmap, HDC dc, int x, int y);
+	int(__stdcall *GetInfo)(IPDFBitmap bitmap, TPDFBitmapInfo* info);
+// Internal
+	PPDFBitmap Reference;
+	int RefCount;
+	FPDF_BITMAP Handle;
+};
+
+struct TPDFBookmark {
+// IUnknwon
+	int(__stdcall *QueryInterface)(void *intf, void *rrid, void*);
+	int(__stdcall *AddRef)(IPDFBookmark bookmark);
+	int(__stdcall *Release)(IPDFBookmark bookmark);
+// IPDFBookmark
+	int(__stdcall *GetPageNumber)(IPDFBookmark bookmark);
+	int(__stdcall *GetTitle)(IPDFBookmark bookmark, PChar title, unsigned long size);
+	int(__stdcall *GetFirstChild)(IPDFBookmark bookmark, IPDFBookmark *child);
+	int(__stdcall *GetNext)(IPDFBookmark bookmark);
+// Internal
+	PPDFBookmark Reference;
+	int RefCount;
+	IPDFium PDF;
+	FPDF_BOOKMARK Handle;
 };
 
 struct TPDFAnnotation {
@@ -80,7 +139,7 @@ struct TPDFAnnotation {
   int(__stdcall *GetSubtype)(IPDFAnnotation annotation);
   int(__stdcall *GetRect)(IPDFAnnotation annotation, TRectF *rect);
   int(__stdcall *SetRect)(IPDFAnnotation annotation, TRectF *rect);
-  int(__stdcall *GetString)(IPDFAnnotation annotation, const char *key, char *str, int size);
+  int(__stdcall *GetString)(IPDFAnnotation annotation, const PAnsiChar key, PChar str, int size);
   int(__stdcall *Remove)(IPDFAnnotation annotation);
 // Internal
   PPDFAnnotation Reference;
@@ -90,6 +149,22 @@ struct TPDFAnnotation {
   FPDF_ANNOTATION Handle;
 };
 
+struct TPDFSearchText {
+// IUnknown
+  int(__stdcall *QueryInterface)(void *intf, void *rrid, void *out);
+  int(__stdcall *AddRef)(IPDFSearchText search);
+  int(__stdcall *Release)(IPDFSearchText search);
+// IPDFSearchText
+  int(__stdcall *FindNext)(IPDFSearchText search);
+  int(__stdcall *FindPrev)(IPDFSearchText search);
+	int(__stdcall *GetPosition)(IPDFSearchText search, int *Start, int *Length);
+// Internal
+  PPDFSearchText Reference;
+	int RefCount;
+	IPDFText Text;
+	FPDF_SCHHANDLE Handle;
+};
+
 struct TPDFText {
 // IUnknown
   int(__stdcall *QueryInterface)(void *intf, void *rrid, void *out);
@@ -97,10 +172,11 @@ struct TPDFText {
   int(__stdcall *Release)(IPDFText text);
 // IPDFText
   int(__stdcall *CharCount)(IPDFText text);
-  int(__stdcall *GetText)(IPDFText text, int Start, int Length, unsigned short *Text);
+  int(__stdcall *GetText)(IPDFText text, int Start, int Length, PChar Text);
   int(__stdcall *CharIndexAtPos)(IPDFText text, TPointsSize *size, int distance);
   int(__stdcall *GetRectCount)(IPDFText text, int Start, int Length);
   int(__stdcall *GetRect)(IPDFText text, int Index, TRectD *rect);
+	int(__stdcall *Search)(IPDFText text, const PChar what, unsigned long flags, int start_index, IPDFSearchText *search);  
 // Internal  
   PPDFText Reference;
   int RefCount;
@@ -121,6 +197,7 @@ struct TPDFPage {
   void(__stdcall *DeviveToPage)(IPDFPage page, TRect *rect, int x, int y, double *px, double *py);
   void(__stdcall *PageToDevice)(IPDFPage page, TRect *rect, double px, double py, int *x, int *y);
 	int(__stdcall *GetRotation)(IPDFPage page);
+  int(__stdcall *GetBitmap)(IPDFPage page, TRect *pageRect, TRect *viewPort, int rotation, int flags, IPDFBitmap* bitmap);
 // Internal
   PPDFPage Reference;
   int RefCount;
@@ -137,14 +214,16 @@ struct TPDFium {
   int(__stdcall *GetVersion)(IPDFium pdf);
   int(__stdcall *GetError)(IPDFium pdf);
   int(__stdcall *CloseDocument)(IPDFium pdf);
-  int(__stdcall *LoadFromFile)(IPDFium pdf, char *filename, char *pwd);
-  int(__stdcall *LoadFromMemory)(IPDFium pdf, void *data, int size, char *pwd);
+  int(__stdcall *LoadFromFile)(IPDFium pdf, PAnsiChar filename, PAnsiChar pwd);
+  int(__stdcall *LoadFromMemory)(IPDFium pdf, void *data, int size, PAnsiChar pwd);
   long(__stdcall *GetPermissions)(IPDFium pdf);
   int(__stdcall *GetPageCount)(IPDFium pdf);
-  int(__stdcall *GetPageSize)(IPDFium pdf, int page_index, double *width, double *height);
+  int(__stdcall *GetPageSize)(IPDFium pdf, int page_index, TPointsSizeF *size);
   int(__stdcall *GetPage)(IPDFium pdf, int page_index, IPDFPage *page);
   int(__stdcall *SaveToStream)(IPDFium pdf, IStream stream);
   int(__stdcall *SaveToProc)(IPDFium pdf, TWriteProc writeProc, void *userData);
+  int(__stdcall *GetFirstBookmark)(IPDFium pdf, IPDFBookmark *bookmark);  
+  int(__stdcall *GetMetaText)(IPDFium pdf, const PAnsiChar name, PChar value, int valueSize);
 // Internal
   PPDFium Reference;
   int RefCount;

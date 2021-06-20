@@ -32,7 +32,6 @@ object PrintDlg: TPrintDlg
     ParentBackground = False
     ShowCaption = False
     TabOrder = 0
-    ExplicitLeft = -5
     object LabelImprimante: TLabel
       Left = 10
       Top = 16
@@ -112,8 +111,6 @@ object PrintDlg: TPrintDlg
     ParentBackground = False
     ShowCaption = False
     TabOrder = 1
-    ExplicitLeft = -5
-    ExplicitTop = 583
     object btCancel: TButton
       AlignWithMargins = True
       Left = 602
@@ -129,7 +126,6 @@ object PrintDlg: TPrintDlg
       Caption = 'Cancel'
       ModalResult = 2
       TabOrder = 1
-      ExplicitLeft = 601
     end
     object btPrint: TButton
       AlignWithMargins = True
@@ -146,7 +142,6 @@ object PrintDlg: TPrintDlg
       Default = True
       TabOrder = 0
       OnClick = btPrintClick
-      ExplicitLeft = 478
     end
   end
   object Panel2: TPanel
@@ -167,8 +162,6 @@ object PrintDlg: TPrintDlg
     ParentDoubleBuffered = False
     ShowCaption = False
     TabOrder = 2
-    ExplicitLeft = 391
-    ExplicitHeight = 497
     object PaintBox: TPaintBox
       Left = 15
       Top = 55
@@ -282,9 +275,6 @@ object PrintDlg: TPrintDlg
     ParentColor = True
     ShowCaption = False
     TabOrder = 3
-    ExplicitLeft = -3
-    ExplicitTop = 87
-    ExplicitHeight = 525
     object Panel5: TPanel
       AlignWithMargins = True
       Left = 0
@@ -305,8 +295,6 @@ object PrintDlg: TPrintDlg
       ParentBackground = False
       ShowCaption = False
       TabOrder = 2
-      ExplicitTop = 384
-      ExplicitHeight = 141
       object CardPanel1: TCardPanel
         Left = 5
         Top = 5
@@ -320,8 +308,6 @@ object PrintDlg: TPrintDlg
         ParentColor = True
         TabOrder = 0
         OnCardChange = CardPanel1CardChange
-        ExplicitTop = 49
-        ExplicitWidth = 389
         object CardEchelle: TCard
           Left = 0
           Top = 0
@@ -331,7 +317,6 @@ object PrintDlg: TPrintDlg
           CardIndex = 0
           ParentColor = True
           TabOrder = 0
-          ExplicitWidth = 389
           object Label6: TLabel
             Left = 242
             Top = 76
@@ -400,7 +385,6 @@ object PrintDlg: TPrintDlg
           Caption = 'Mise en page'
           CardIndex = 1
           TabOrder = 1
-          ExplicitWidth = 389
           object LabelpagesparFeuilles: TLabel
             Left = 5
             Top = 11
@@ -473,8 +457,6 @@ object PrintDlg: TPrintDlg
       ParentBackground = False
       ShowCaption = False
       TabOrder = 0
-      ExplicitLeft = -3
-      ExplicitTop = -3
       object LabelpagesImprimer: TLabel
         Left = 10
         Top = 6
@@ -567,7 +549,6 @@ object PrintDlg: TPrintDlg
       ParentBackground = False
       ShowCaption = False
       TabOrder = 1
-      ExplicitWidth = 399
       object LabelOrientation: TLabel
         Left = 10
         Top = 50
@@ -707,8 +688,8 @@ object PrintDlg: TPrintDlg
         Caption = 'Page layout'
         Layout = tlCenter
         OnClick = tabScaleClick
-        ExplicitLeft = 68
-        ExplicitHeight = 34
+        ExplicitLeft = 77
+        ExplicitTop = -1
       end
       object tabShape: TShape
         Left = 3

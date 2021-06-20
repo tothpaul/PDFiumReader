@@ -65,6 +65,8 @@ type
     Edit1: TMenuItem;
     Copy1: TMenuItem;
     btPrint: TPaintBox;
+    mnProperties: TMenuItem;
+    Search1: TMenuItem;
     procedure Open1Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -91,6 +93,8 @@ type
     procedure edPageKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure Copy1Click(Sender: TObject);
     procedure btPrintClick(Sender: TObject);
+    procedure mnPropertiesClick(Sender: TObject);
+    procedure Search1Click(Sender: TObject);
   private
     { Déclarations privées }
     FButtons  : TBitmap;
@@ -110,7 +114,7 @@ implementation
 {$R *.dfm}
 
 uses
-  DynamicButtons;
+  DynamicButtons, PDFium.SearchDlg;
 
 resourcestring
   sPDFFiler  = 'Adobe PDF files (*.pdf)|*.pdf';
@@ -159,6 +163,11 @@ end;
 procedure TMainForm.mnPageLevelClick(Sender: TObject);
 begin
   PDFium.ZoomMode := zmPageLevel;
+end;
+
+procedure TMainForm.mnPropertiesClick(Sender: TObject);
+begin
+  ShowMessage(PDFium.GetProperties);
 end;
 
 procedure TMainForm.ButtonPaint(Sender: TObject);
@@ -394,6 +403,11 @@ end;
 procedure TMainForm.Quit1Click(Sender: TObject);
 begin
   Close();
+end;
+
+procedure TMainForm.Search1Click(Sender: TObject);
+begin
+  TSearchDlg.Execute(PDFium);
 end;
 
 end.

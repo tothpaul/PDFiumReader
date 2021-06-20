@@ -243,7 +243,6 @@ object MainForm: TMainForm
       TabOrder = 0
       Visible = False
       OnResize = pnPagesResize
-      ExplicitLeft = 283
       object btNext: TPaintBox
         Tag = 16
         AlignWithMargins = True
@@ -351,6 +350,10 @@ object MainForm: TMainForm
         Caption = 'Close'
         OnClick = Close1Click
       end
+      object mnProperties: TMenuItem
+        Caption = 'Properties'
+        OnClick = mnPropertiesClick
+      end
       object N1: TMenuItem
         Caption = '-'
       end
@@ -366,6 +369,11 @@ object MainForm: TMainForm
         Caption = 'Copy'
         ShortCut = 16451
         OnClick = Copy1Click
+      end
+      object Search1: TMenuItem
+        Caption = 'Search...'
+        ShortCut = 16454
+        OnClick = Search1Click
       end
     end
   end

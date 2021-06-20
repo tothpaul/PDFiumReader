@@ -61,22 +61,28 @@ type
     { Déclarations privées }
     type
       TPDFPage = class
-        Index    : Integer;
-        Handle   : IPDFPage;
-        Top      : Double;
-        Rect     : TRect;
-        Text     : IPDFText;
-        NoText   : Boolean;
-        Visible  : Integer;
-        SelStart : Integer;
-        SelStop  : Integer;
-        Selection: TArray<TRectD>;
+        Frame     : TPDFiumFrame;
+        Index     : Integer;
+        Handle    : IPDFPage;
+        Top       : Double;
+        Rect      : TRect;
+        Text      : IPDFText;
+        NoText    : Boolean;
+        Visible   : Integer;
+        SelStart  : Integer;
+        SelStop   : Integer;
+        Selection : TArray<TRectD>;
+        HasWidgets: Boolean;
+        Bitmap    : IPDFBitmap;
+        procedure CheckWidgets;
         function HasText: Boolean;
         function CharIndex(x, y, distance: Integer): Integer;
         function CharCount: Integer;
+        function Search(const AText: string; AStart: Integer): IPDFSearchText;
         function Select(Start: Integer): Boolean;
         function SelectTo(Stop: Integer): Boolean;
         function ClearSelection: Boolean;
+        function GetSelectRange(var ARect: TRect): Boolean;
         procedure Paint(DC: HDC);
         procedure DrawSelection(DC, BMP: HDC; const Blend: TBlendFunction; const Client: TRect);
       end;
@@ -85,7 +91,7 @@ type
     FPDF      : IPDFium;
     FError    : Integer;
     FPageCount: Integer;
-    FPageSize : TArray<TPointsSize>;
+    FPageSize : TArray<TPointsSizeF>;
     FTotalSize: TPointsSize;
     FPages    : TList;
     FReload   : Boolean;
@@ -99,6 +105,9 @@ type
     FSelBmp   : TBitmap;
     FInvalide : Boolean;
     FOnPaint  : TNotifyEvent;
+    FSearchText: string;
+    FSearchPage: Integer;
+    FSearch    : IPDFSearchText;
   {$IFDEF TRACK_CURSOR}
     FCharIndex: Integer;
     FCharBox  : TRectD;
@@ -133,6 +142,8 @@ type
     function GetPageY(PageIndex: Integer): Integer;
     function PageToScreen(Value: Single): Integer; inline;
     function ScaleToScreen: Single;
+    procedure ShowSelection;
+    procedure ComputePageRect(APage: TPDFPage);
   public
     { Déclarations publiques }
     constructor Create(AOwner: TComponent); override;
@@ -154,6 +165,9 @@ type
     function PageHeight(PageNumber: Integer): Double;
     function IsLandscape(PageNumber: Integer): Boolean;
     function GetSelectionText: string;
+    function GetProperty(const Name: AnsiString): string;
+    function GetProperties: string;
+    function Search(const AText: string; ANext: Boolean): Boolean;
     property PageIndex: Integer read FPageIndex;
     property PageCount: Integer read FPageCount;
     property PageNumber: Integer read GetPageNumber write SetPageNumber;
@@ -224,6 +238,13 @@ var
   R: TRect;
   P: TPoint;
 begin
+  if HasWidgets then
+  begin
+    if Bitmap = nil then
+      Handle.GetBitmap(Rect, Rect, 0, FPDF_ANNOT, Bitmap);
+    Bitmap.Draw(DC, Rect.Left, Rect.Top);
+    Exit;
+  end;
   if (Rect.Left <> 0) or (Rect.Top <> 0) then
   begin
     R := TRect.Create(0, 0, Rect.Width, Rect.Height);
@@ -253,6 +274,28 @@ begin
   Result := Text.CharIndexAtPos(Pos, distance);
 end;
 
+procedure TPDFiumFrame.TPDFPage.CheckWidgets;
+var
+  Count: Integer;
+  Index: Integer;
+  Annot: IPDFAnnotation;
+begin
+  if Handle = nil then
+    Exit;
+  Count := Handle.GetAnnotationCount;
+  for Index := 0 to Count - 1 do
+  begin
+    if Handle.GetAnnotation(Index, Annot) = 0 then
+    begin
+      if Annot.GetSubtype = FPDF_ANNOT_WIDGET then
+      begin
+        HasWidgets := True;
+        Exit;
+      end;
+    end;
+  end;
+end;
+
 function TPDFiumFrame.TPDFPage.ClearSelection: Boolean;
 begin
   Result := Selection <> nil;
@@ -279,6 +322,50 @@ begin
     if Client.IntersectsWith(R) then
       AlphaBlend(DC, R.Left, R.Top, R.Width, R.Height, BMP, 0, 0, 100, 50, Blend);
   end;
+end;
+
+function TPDFiumFrame.TPDFPage.GetSelectRange(var ARect: TRect): Boolean;
+var
+  Index: Integer;
+  R: TRect;
+begin
+  Result := Length(Selection) > 0;
+  if Result and (Visible < 1) then
+  begin
+    Frame.ComputePageRect(Self);
+  end;
+  for Index := 0 to Length(Selection) - 1 do
+  begin
+    with Selection[Index] do
+    begin
+      Handle.PageToDevice(Rect, Left, Top, R.Left, R.Top);
+      Handle.PageToDevice(Rect, Right, Bottom, R.Right, R.Bottom);
+    end;
+    if ARect.Height = 0 then
+    begin
+      ARect := R;
+    end
+    else
+    begin
+      if R.Top < ARect.Top then
+        ARect.Top := R.Top;
+      if R.Bottom > ARect.Bottom then
+        ARect.Bottom := R.Bottom;
+      if R.Left < ARect.Left then
+        ARect.Left := R.Left;
+      if R.Right > ARect.Right then
+        ARect.Right := R.Right;
+    end;
+  end;
+end;
+
+function TPDFiumFrame.TPDFPage.Search(const AText: string;
+  AStart: Integer): IPDFSearchText;
+begin
+  if not HasText then
+    Result := nil
+  else
+    Text.Search(TString(AText), 0, AStart, Result);
 end;
 
 function TPDFiumFrame.TPDFPage.Select(Start: Integer): Boolean;
@@ -335,6 +422,8 @@ end;
 { TPDFiumFrame }
 
 constructor TPDFiumFrame.Create(AOwner: TComponent);
+var
+  Err: Integer;
 begin
 {$IFDEF TRACK_EVENTS}
   AllocConsole;
@@ -350,7 +439,9 @@ begin
 
   FPages := TList.Create;
   try
-    PDF_Create(PDFIUM_VERSION, FPDF);
+    Err := PDF_Create(PDFIUM_VERSION, FPDF);
+    if Err <> 0 then
+      raise Exception.Create('Unable to load PDF');
   except
     FStatus := TLabel.Create(Self);
     FStatus.Align := alClient;
@@ -385,7 +476,7 @@ var
 begin
   AnsiName := AnsiString(AFileName);
   ClearPages;
-  FError := FPDF.LoadFromFile(PAnsiChar(AnsiName), nil);
+  FError := FPDF.LoadFromFile(TAnsiString(AnsiName), '');
   while FError = FPDF_ERR_PASSWORD do
   begin
     if InputQuery('PDFium', 'Password', Password) = False then
@@ -399,7 +490,7 @@ end;
 procedure TPDFiumFrame.LoadFromMemory(APointer: Pointer; ASize: Integer);
 begin
   ClearPages;
-  FError := FPDF.LoadFromMemory(APointer, ASize, nil);
+  FError := FPDF.LoadFromMemory(APointer, ASize, '');
   OnLoad;
 end;
 
@@ -436,6 +527,95 @@ begin
   Result := FZoom / 100 * Screen.PixelsPerInch / 72;
 end;
 
+function TPDFiumFrame.Search(const AText: string; ANext: Boolean): Boolean;
+var
+  Start: Integer;
+  Len: Integer;
+  Page: TPDFPage;
+begin
+  Result := False;
+  if AText = '' then
+    Exit;
+  if (AText <> FSearchText) or (FSearch = nil) then
+  begin
+    FSearchText := AText;
+    FSearchPage := PageIndex;
+    if ANext then
+      Start := 0
+    else
+      Start := -1;
+    FSearch := GetPage(FSearchPage).Search(AText, Start);
+  end;
+  if ANext then
+  begin
+    while (FSearch = nil) or (FSearch.FindNext = 0) do
+    begin
+      repeat
+        if FSearchPage = PageCount - 1 then
+        begin
+          FSearch := nil;
+          Exit;
+        end;
+        Inc(FSearchPage);
+        FSearch := GetPage(FSearchPage).Search(AText, 0);
+      until FSearch <> nil;
+    end;
+  end
+  else
+  begin
+    while (FSearch = nil) or (FSearch.FindPrev = 0) do
+    begin
+      repeat
+        if FSearchPage = 0 then
+        begin
+          FSearch := nil;
+          Exit;
+        end;
+        Dec(FSearchPage);
+        FSearch := GetPage(FSearchPage).Search(AText, -1);
+      until FSearch <> nil;
+    end;
+  end;
+
+  ClearSelection;
+  FSearch.GetPosition(Start, Len);
+  Page := GetPage(FSearchPage);
+  Page.Select(Start);
+  Page.SelectTo(Start + Len);
+  ShowSelection;
+  Invalidate;
+  Result := True;
+end;
+(*
+var
+  Index: Integer;
+  Page: TPDFPage;
+  Start, Len: Integer;
+begin
+  for Index := 0 to Pred(FPDF.GetPageCount) do
+  begin
+    Page := GetPage(Index);
+    if Page.HasText then
+    begin
+      AllocConsole;
+      WriteLn('$', IntToHex(Cardinal(Text), 8), ' ', ord(Text[1]));
+      Page.Text.Search(TString(Text), 0, 0, Result);
+      if (Result <> nil) then
+      begin
+         Result.GetPosition(Start, Len);
+        if (Result.FindNext = 0) then
+        begin
+          SetPageNumber(Index);
+          Result.GetPosition(Start, Len);
+          Page.Select(Start);
+          Page.SelectTo(Start + Len);
+        end;
+      end;
+    end;
+  end;
+end;
+*)
+
 procedure TPDFiumFrame.SetPageCount(Value: Integer);
 var
   Index: Integer;
@@ -447,13 +627,15 @@ begin
   begin
     SetLength(FPageSize, FPageCount);
     for Index := 0 to FPageCount - 1 do
+    begin
+      FPDF.GetPageSize(Index, FPageSize[Index]);
       with FPageSize[Index] do
       begin
-        FPDF.GetPageSize(Index, cx, cy);
         if cx > FTotalSize.cx then
           FTotalSize.cx := cx;
         FTotalSize.cy := FTotalSize.cy + cy;
       end;
+    end;
   end;
   HorzScrollBar.Position := 0;
   VertScrollBar.Position := 0;
@@ -500,6 +682,62 @@ begin
   AdjustZoom;
 end;
 
+procedure TPDFiumFrame.ShowSelection;
+var
+  R: TRect;
+  Index: Integer;
+  Page: TPDFPage;
+  sPage: TPDFPage;
+  V0, V1: Integer;
+  dx, dy: Integer;
+begin
+  FillChar(R, SizeOf(R), 0);
+  sPage := nil;
+  for Index := 0 to FPages.Count - 1 do
+  begin
+    Page := FPages[Index];
+    if Page.GetSelectRange(R) then
+      sPage := Page;
+  end;
+  if R.Height = 0 then
+    Exit;
+  V0 := VertScrollBar.Position;
+  V1 := V0 + ClientHeight;
+
+  dx := 0;
+  dy := 0;
+
+  if (R.Top < 0) or (V0 + R.Top > V1) then
+  begin
+    dy := -R.Top;
+  end;
+
+  V0 := HorzScrollBar.Position;
+  V1 := V0 + ClientWidth;
+  if (R.Left < 0) then
+    dx := -R.Left
+  else if (V0 + R.Right > V1) then
+  begin
+    dx := V1 - R.Right;
+    if dx > -R.Left then
+      dx := -R.Left;
+  end;
+
+  if (dx <> 0) or (dy <> 0) then
+  begin
+    SendMessage(Handle, WM_SETREDRAW, WPARAM(False), 0);
+    try
+      ScrollBy(dx, dy);
+      HorzScrollBar.Position := HorzScrollBar.Position - dx;
+      VertScrollBar.Position := VertScrollBar.Position - dy;
+    finally
+      SendMessage(Handle, WM_SETREDRAW, WPARAM(True), 0);
+      FReload := True;
+      inherited Invalidate;
+    end;
+  end;
+end;
+
 procedure TPDFiumFrame.AdjustZoom;
 begin
   case FZoomMode of
@@ -541,6 +779,8 @@ procedure TPDFiumFrame.CloseDocument;
 begin
   if FPDF <> nil then
   begin
+    FSearchText := '';
+    FSearch := nil;
     ClearPages;
     FPDF.CloseDocument;
     if not (csDestroying in ComponentState) then
@@ -549,6 +789,34 @@ begin
       Invalidate;
     end;
   end;
+end;
+
+procedure TPDFiumFrame.ComputePageRect(APage: TPDFPage);
+var
+  Top: Double;
+  Marge: Integer;
+  Index: Integer;
+  Scale: Single;
+  Center: Integer;
+begin
+  Top := 0;
+  Marge := PAGE_MARGIN;
+  for Index := 0 to APage.Index - 1 do
+  begin
+    Top := Top + FPageSize[Index].cy;
+    Inc(Marge, PAGE_MARGIN);
+  end;
+  Index := APage.Index;
+  Scale := ScaleToScreen;
+  Center := HorzScrollBar.Range;
+  if Center >= ClientWidth then
+    Center := PAGE_MARGIN + Center div 2
+  else
+    Center := ClientWidth div 2;
+  APage.Rect.Top := Round(Top * Scale) + Marge - VertScrollBar.Position;
+  APage.Rect.Left := Center - Round(FPageSize[Index].cx / 2 * Scale) - HorzScrollBar.Position;
+  APage.Rect.Width := Round(FPageSize[Index].cx * Scale);
+  APage.Rect.Height := Round(FPageSize[Index].cy * Scale);
 end;
 
 function TPDFiumFrame.GetPage(PageIndex: Integer): TPDFPage;
@@ -562,9 +830,11 @@ begin
       Exit;
   end;
   Result := TPDFPage.Create;
+  Result.Frame := Self;
   FPages.Add(Result);
   Result.Index := PageIndex;
   FPDF.GetPage(PageIndex, Result.Handle);
+  Result.CheckWidgets;
 end;
 
 function TPDFiumFrame.GetPageAt(const p: TPoint): TPDFPage;
@@ -613,6 +883,33 @@ begin
   Inc(Result, PageToScreen(y));
 end;
 
+
+function TPDFiumFrame.GetProperties: string;
+begin
+  Result := GetProperty('Title')
+          + GetProperty('Author')
+          + GetProperty('Subject')
+          + GetProperty('Keywords')
+          + GetProperty('Creator')
+          + GetProperty('Producer')
+          + GetProperty('CreationDate')
+          + GetProperty('ModDate');
+end;
+
+function TPDFiumFrame.GetProperty(const Name: AnsiString): string;
+var
+  L: Integer;
+begin
+  L := FPDF.GetMetaText(TAnsiString(Name), nil, 0);
+  if L > 2 then
+  begin
+    SetLength(Result, (L div 2) - 1);
+    FPDF.GetMetaText(TAnsiString(Name), Pointer(Result), L);
+    Result := string(Name) + ': ' + Result + #13;
+  end else begin
+    Result := '';
+  end;
+end;
 
 function TPDFiumFrame.GetSelectionText: string;
 var

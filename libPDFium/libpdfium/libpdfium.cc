@@ -8,7 +8,7 @@
 
 #include "libpdfium.h"
 
-#define IS_REF(i) i && *i && (*i == &(*(*i))->Reference) 
+#define IS_REF(i) (i && *i && (*i == &(*(*i))->Reference))
 
 //#define TRACE
 #ifdef TRACE
@@ -69,6 +69,91 @@ int WINAPI QueryInterface(void *self, void *rrid, void *out) {
 int WINAPI PDF_Free(IPDFium pdf);
 int WINAPI PDFPage_Free(IPDFPage page);
 int WINAPI PDFText_Free(IPDFText text);
+int WINAPI PDFSearchText_Free(IPDFSearchText search);
+
+// IPDFBookmark
+
+int InternalGetBookmark(IPDFium pdf, FPDF_BOOKMARK parent, IPDFBookmark *bookmark); // forward
+
+int WINAPI PDFBookmark_AddRef(IPDFBookmark bookmark) {
+  LOG("PDFBookmark_AddRef\n")
+  REF(bookmark)
+  return ++(*bookmark)->RefCount;
+}
+
+int WINAPI PDFBookmark_Free(IPDFBookmark bookmark) {
+  LOG("PDFBookmark_Free\n")
+  REF(bookmark)
+  int i =--(*bookmark)->RefCount;
+  if (i == 0) {
+    PDF_Free((*bookmark)->PDF);
+	delete (*bookmark)->Reference;
+  } 
+  return i;
+}
+
+int WINAPI PDFBookmark_GetPageNumber(IPDFBookmark bookmark) {
+  LOG("PDFBookmark_GetPageNumber\n")
+  REF(bookmark)
+  FPDF_DOCUMENT doc = (*(*bookmark)->PDF)->Handle; 
+  FPDF_DEST dest = FPDFBookmark_GetDest(doc, (*bookmark)->Handle);
+  if (dest) {
+	  return FPDFDest_GetDestPageIndex(doc, dest);
+  }  
+  return -1; 
+}
+
+int WINAPI PDFBookmark_GetTitle(IPDFBookmark bookmark, PChar title, unsigned long size) {
+  LOG("PDFBookmark_GetTitle\n")
+  REF(bookmark)
+  return FPDFBookmark_GetTitle((*bookmark)->Handle, title, size);
+}
+
+int WINAPI PDFBookmark_GetFirstChild(IPDFBookmark bookmark, IPDFBookmark *child) {
+  LOG("PDFBookmark_GetFirstChild\n")
+  return InternalGetBookmark((*bookmark)->PDF, (*bookmark)->Handle, child); 
+}
+
+int WINAPI PDFBookmark_GetNext(IPDFBookmark bookmark) {
+  LOG("PDFBookmark_GetNext\n")
+  REF(bookmark)
+  FPDF_DOCUMENT doc = (*(*bookmark)->PDF)->Handle;
+  FPDF_BOOKMARK next = FPDFBookmark_GetNextSibling(doc, (*bookmark)->Handle);
+  if (next) {
+	  (*bookmark)->Handle = next;
+	  return 0;
+  }
+  return 1;
+}
+
+int InternalGetBookmark(IPDFium pdf, FPDF_BOOKMARK parent, IPDFBookmark *bookmark) {
+	REF(pdf)
+		if (IS_REF(bookmark))
+			PDFBookmark_Free(*bookmark);
+	FPDF_BOOKMARK Handle = FPDFBookmark_GetFirstChild((*pdf)->Handle, parent);
+	if (Handle) {
+		TPDFBookmark* PDFBookmark = new TPDFBookmark();
+		// Internal
+		(*pdf)->RefCount++;
+		PDFBookmark->PDF = pdf;
+		PDFBookmark->Handle = Handle;
+		PDFBookmark->Reference = PDFBookmark;
+		PDFBookmark->RefCount = 1;
+		// IUnknown
+		PDFBookmark->QueryInterface = QueryInterface;
+		PDFBookmark->AddRef = PDFBookmark_AddRef;
+		PDFBookmark->Release = PDFBookmark_Free;
+		// IPDFBookmark
+		PDFBookmark->GetPageNumber = PDFBookmark_GetPageNumber;
+		PDFBookmark->GetTitle = PDFBookmark_GetTitle;
+		PDFBookmark->GetFirstChild = PDFBookmark_GetFirstChild;
+		PDFBookmark->GetNext = PDFBookmark_GetNext;
+		// Result
+		*bookmark = &PDFBookmark->Reference;
+		return 0;
+	}
+	return 1;
+}
 
 // IPDFAnnotation
 
@@ -110,10 +195,10 @@ int WINAPI PDFAnnotation_SetRect(IPDFAnnotation annotation, TRectF *rect) {
   return FPDFAnnot_SetRect((*annotation)->Handle, (FS_LPRECTF)rect);
 }
 
-int WINAPI PDFAnnotation_GetString(IPDFAnnotation annotation, const char *key, char *str, int size) {
+int WINAPI PDFAnnotation_GetString(IPDFAnnotation annotation, const PAnsiChar key, PChar str, int size) {
   LOG("PDFAnnotation_GetString\n")
   REF(annotation)
-  return FPDFAnnot_GetStringValue((*annotation)->Handle, key, (unsigned short *)str, size);
+  return FPDFAnnot_GetStringValue((*annotation)->Handle, key, str, size);
 }
 
 int WINAPI PDFAnnotation_Remove(IPDFAnnotation annotation) {
@@ -123,6 +208,46 @@ int WINAPI PDFAnnotation_Remove(IPDFAnnotation annotation) {
   FPDFPage_CloseAnnot((*annotation)->Handle);
   (*annotation)->Handle = 0;
   return FPDFPage_RemoveAnnot((*(*annotation)->Page)->Handle, (*annotation)->Index);
+}
+
+// IPDFSearchText
+
+int WINAPI PDFSearchText_AddRef(IPDFSearchText search) {
+	LOG("PDFSearchText_AddRef")
+	REF(search)
+	return ++(*search)->RefCount;
+}
+
+int WINAPI PDFSearchText_Free(IPDFSearchText search) {
+  LOG("PDFSearchText_Free\n")
+  REF(search)
+  int i = --(*search)->RefCount;
+  if (i == 0) {
+    FPDFText_FindClose((*search)->Handle);
+    PDFText_Free((*search)->Text);
+    delete (*search)->Reference;
+  }
+  return i;
+}
+
+int WINAPI PDFSearchText_FindNext(IPDFSearchText search) {
+  LOG("PDFSearchText_FindNext\n")
+	REF(search)
+	return FPDFText_FindNext((*search)->Handle);
+}
+
+int WINAPI PDFSearchText_FindPrev(IPDFSearchText search) {
+  LOG("PDFSearchText_FindPrev\n")
+	REF(search)
+	return FPDFText_FindPrev((*search)->Handle);
+}
+
+int WINAPI PDFSearchText_GetPosition(IPDFSearchText search, int *start, int *length) {
+  LOG("PDFSearchText_GetPosition\n")
+	REF(search)
+	*start = FPDFText_GetSchResultIndex((*search)->Handle);
+	*length = FPDFText_GetSchCount((*search)->Handle);
+	return 0;
 }
 
 // IPDFText
@@ -151,7 +276,7 @@ int WINAPI PDFText_CharCount(IPDFText text) {
   return FPDFText_CountChars((*text)->Handle);
 }
 
-int WINAPI PDFText_GetText(IPDFText text, int Start, int Length, unsigned short *Text) {
+int WINAPI PDFText_GetText(IPDFText text, int Start, int Length, PChar Text) {
   REF(text)
   return FPDFText_GetText((*text)->Handle, Start, Length, Text);
 }
@@ -169,6 +294,84 @@ int WINAPI PDFText_GetRectCount(IPDFText text, int Start, int Length) {
 int WINAPI PDFText_GetRect(IPDFText text, int Index, TRectD *rect) {
   REF(text)
   return FPDFText_GetRect((*text)->Handle, Index, &rect->Left, &rect->Top, &rect->Right, &rect->Bottom);
+}
+
+int WINAPI PDFText_Search(IPDFText text, const PChar what, unsigned long flags, int start_index, IPDFSearchText *search) {
+	LOG("PDFText_Search\n")
+	REF(text)
+	if (IS_REF(search))
+		PDFSearchText_Free(*search);
+	FPDF_SCHHANDLE Handle = FPDFText_FindStart((*text)->Handle, (FPDF_WIDESTRING)what, flags, start_index);
+	if (Handle) {
+		TPDFSearchText* PDFSearchText = new TPDFSearchText();
+		// Internal
+		(*text)->RefCount++;
+		PDFSearchText->Text = text;
+		PDFSearchText->Handle = Handle;
+		PDFSearchText->Reference = PDFSearchText;
+		PDFSearchText->RefCount = 1;
+		// IUnknown
+		PDFSearchText->QueryInterface = QueryInterface;
+		PDFSearchText->AddRef = PDFSearchText_AddRef;
+		PDFSearchText->Release = PDFSearchText_Free;
+		// IPDFSearchText
+		PDFSearchText->FindNext = PDFSearchText_FindNext;
+		PDFSearchText->FindPrev = PDFSearchText_FindPrev;
+		PDFSearchText->GetPosition = PDFSearchText_GetPosition;
+		// Result
+		*search = &PDFSearchText->Reference;
+		return 1;
+	}
+	return 0;
+}
+
+// IPDFBitmap
+
+int WINAPI PDFBitmap_AddRef(IPDFBitmap bitmap) {
+	LOG("PDFBitmap_AddRef\n")
+	REF(bitmap)
+	return ++(*bitmap)->RefCount;
+}
+
+int WINAPI PDFBitmap_Free(IPDFBitmap bitmap) {
+	LOG("PDFBitmap_Free\n")
+	REF(bitmap)
+	int i = --(*bitmap)->RefCount;
+	if (i == 0) {
+		FPDFBitmap_Destroy((*bitmap)->Handle);
+		delete (*bitmap)->Reference;
+	}
+	return i;
+}
+
+int WINAPI PDFBitmap_Draw(IPDFBitmap bitmap, HDC dc, int x, int y) {
+	LOG("PDFBitmap_Draw\n")
+	REF(bitmap)
+	if (!dc) return false;
+	int w = FPDFBitmap_GetWidth((*bitmap)->Handle);
+	int h = FPDFBitmap_GetHeight((*bitmap)->Handle);
+	void* p = FPDFBitmap_GetBuffer((*bitmap)->Handle);
+	BITMAPINFO bi;
+	memset(&bi, 0, sizeof(bi));
+	bi.bmiHeader.biSize = 40;
+	bi.bmiHeader.biWidth = w;
+	bi.bmiHeader.biHeight = -h;
+	bi.bmiHeader.biPlanes = 1;
+	bi.bmiHeader.biBitCount = 32;
+	SetDIBitsToDevice(dc, x, y, w, h, 0, 0, 0, h, p, &bi, 0);
+	return true;
+}
+
+int WINAPI PDFBitmap_GetInfo(IPDFBitmap bitmap, TPDFBitmapInfo* info) {
+	LOG("PDFBitmap_GetInfo\n")
+	REF(bitmap)
+	if (!info) return false;
+	info->Format = FPDFBitmap_GetFormat((*bitmap)->Handle);
+	info->Width = FPDFBitmap_GetWidth((*bitmap)->Handle);
+	info->Height = FPDFBitmap_GetHeight((*bitmap)->Handle);
+	info->Stride = FPDFBitmap_GetStride((*bitmap)->Handle);
+	info->Buffer = FPDFBitmap_GetBuffer((*bitmap)->Handle);
+	return true;
 }
 
 // IPDFPage
@@ -261,6 +464,7 @@ int WINAPI PDFPage_GetText(IPDFPage page, IPDFText *text) {
     PDFText->CharIndexAtPos = PDFText_CharIndexAtPos;
     PDFText->GetRectCount = PDFText_GetRectCount;
     PDFText->GetRect = PDFText_GetRect;
+    PDFText->Search = PDFText_Search;
   // Result
     *text = &PDFText->Reference;
     return 0;
@@ -282,6 +486,48 @@ int WINAPI PDFPage_GetRotation(IPDFPage page) {
   LOG("PDFPage_GetRotation\n")
   REF(page)
   return FPDFPage_GetRotation((*page)->Handle);
+}
+
+int WINAPI PDFPage_GetBitmap(IPDFPage page, TRect *pageRect, TRect *viewPort, int rotation, int flags, IPDFBitmap *bitmap) {
+	LOG("PDFPage_GetBitmap\n")
+	REF(page)
+	if IS_REF(bitmap)
+		PDFBitmap_Free(*bitmap);
+	int width = viewPort->Right - viewPort->Left;
+	int height = viewPort->Bottom - viewPort->Top;    
+  FPDF_BITMAP Handle = FPDFBitmap_Create(width, height, 0);
+	if (!Handle) return false;
+
+	FPDFBitmap_FillRect(Handle, 0, 0, width, height, 0xFFFFFFFF);
+	int x = pageRect->Left - viewPort->Left;
+	int y = pageRect->Top - viewPort->Top;
+	int w = pageRect->Right - pageRect->Left;
+	int h = pageRect->Bottom - pageRect->Top;  
+	FPDF_RenderPageBitmap(Handle, (*page)->Handle, x, y, w, h, rotation, flags);
+
+	FPDF_DOCUMENT doc = (*(*page)->PDF)->Handle;
+	FPDF_FORMFILLINFO info;
+	memset(&info, 0, sizeof(info));
+	info.version = 1; 
+	FPDF_FORMHANDLE form = FPDFDOC_InitFormFillEnvironment(doc, &info);
+	FPDF_FFLDraw(form, Handle, (*page)->Handle, x, y, w, h, rotation, flags);
+	FPDFDOC_ExitFormFillEnvironment(form);
+
+	TPDFBitmap* PDFBitmap = new TPDFBitmap();
+	// Internal
+	PDFBitmap->Handle = Handle;
+	PDFBitmap->Reference = PDFBitmap;
+	PDFBitmap->RefCount = 1;
+	// IUnknown
+	PDFBitmap->QueryInterface = QueryInterface;
+	PDFBitmap->AddRef = PDFBitmap_AddRef;
+	PDFBitmap->Release = PDFBitmap_Free;
+	// IPDFBitmap
+	PDFBitmap->Draw = PDFBitmap_Draw;
+	PDFBitmap->GetInfo = PDFBitmap_GetInfo;
+	// Result
+	*bitmap = &PDFBitmap->Reference;
+	return true;
 }
 
 // IPDFium
@@ -325,7 +571,7 @@ int WINAPI PDF_CloseDocument(IPDFium pdf) {
   return 0;
 }
 
-int WINAPI PDF_LoadFromFile(IPDFium pdf, char* filename, char* pwd) {
+int WINAPI PDF_LoadFromFile(IPDFium pdf, PAnsiChar filename, PAnsiChar pwd) {
   LOG("PDF_LoadFromFile\n")
   REF(pdf)
   if ((*pdf)->Handle) FPDF_CloseDocument((*pdf)->Handle);
@@ -333,7 +579,7 @@ int WINAPI PDF_LoadFromFile(IPDFium pdf, char* filename, char* pwd) {
   return (*pdf)->Handle ? 0 : (int)FPDF_GetLastError();
 }
 
-int WINAPI PDF_LoadFromMemory(IPDFium pdf, void* data, int size, char* pwd) {
+int WINAPI PDF_LoadFromMemory(IPDFium pdf, void* data, int size, PAnsiChar pwd) {
   LOG("PDF_LoadFromMemory\n")
   REF(pdf)	
   if ((*pdf)->Handle) FPDF_CloseDocument((*pdf)->Handle);
@@ -352,10 +598,10 @@ int WINAPI PDF_GetPageCount(IPDFium pdf) {
   return FPDF_GetPageCount((*pdf)->Handle);
 }
 
-int WINAPI PDF_GetPageSize(IPDFium pdf, int page_index, double* width, double* height) {
+int WINAPI PDF_GetPageSize(IPDFium pdf, int page_index, TPointsSizeF *size) {
   LOG("PDF_GetPageSize\n")
   REF(pdf)
-  return FPDF_GetPageSizeByIndex((*pdf)->Handle, page_index, width, height);
+  return FPDF_GetPageSizeByIndexF((*pdf)->Handle, page_index, (FS_SIZEF*)size);
 }
 
 int WINAPI PDF_GetPage(IPDFium pdf, int page_index, IPDFPage* page) {
@@ -384,6 +630,7 @@ int WINAPI PDF_GetPage(IPDFium pdf, int page_index, IPDFPage* page) {
     PDFPage->DeviveToPage = PDFPage_DeviveToPage;
     PDFPage->PageToDevice = PDFPage_PageToDevice;
 		PDFPage->GetRotation = PDFPage_GetRotation;
+    PDFPage->GetBitmap = PDFPage_GetBitmap;
   // Result
     *page = &PDFPage->Reference;
     return 0;
@@ -437,6 +684,17 @@ int WINAPI PDF_SaveToProc(IPDFium pdf, TWriteProc writeProc, void *userData) {
   return FPDF_SaveAsCopy((*pdf)->Handle, &FW.FW, 0);
 }
 
+int WINAPI PDF_GetFirstBookmark(IPDFium pdf, IPDFBookmark *bookmark) {
+  LOG("PDF_GetFirstBookmark\n")
+  return InternalGetBookmark(pdf, NULL, bookmark);
+}
+
+int WINAPI PDF_GetMetaText(IPDFium pdf, const PAnsiChar name, PChar value, int valueSize) {
+  LOG("PDF_GetMetaText\n")
+  REF(pdf)
+  return FPDF_GetMetaText((*pdf)->Handle, name, value, valueSize);
+}
+
 int initialized = 0;
 
 int WINAPI PDF_Create(int RequestedVersion, IPDFium* pdf) {
@@ -451,7 +709,7 @@ int WINAPI PDF_Create(int RequestedVersion, IPDFium* pdf) {
     PDF_Free(*pdf);
   TPDFium *PDF = new TPDFium();
   // Internal
-  PDF->Version = 1;
+  PDF->Version = PDFIUM_VERSION;
   PDF->Reference = PDF;
   PDF->RefCount = 1;
   PDF->Handle = 0;
@@ -471,6 +729,8 @@ int WINAPI PDF_Create(int RequestedVersion, IPDFium* pdf) {
   PDF->GetPage = PDF_GetPage;
   PDF->SaveToStream = PDF_SaveToStream;
   PDF->SaveToProc = PDF_SaveToProc;
+  PDF->SaveToProc = PDF_SaveToProc;
+  PDF->GetMetaText = PDF_GetMetaText;
   // Result
   *pdf = &PDF->Reference;
   return 0;
