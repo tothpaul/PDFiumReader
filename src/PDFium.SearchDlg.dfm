@@ -1,0 +1,50 @@
+object SearchDlg: TSearchDlg
+  Left = 0
+  Top = 0
+  BorderIcons = [biSystemMenu]
+  BorderStyle = bsSingle
+  Caption = 'Search'
+  ClientHeight = 70
+  ClientWidth = 210
+  Color = clBtnFace
+  CustomTitleBar.CaptionAlignment = taCenter
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -11
+  Font.Name = 'Tahoma'
+  Font.Style = []
+  FormStyle = fsStayOnTop
+  KeyPreview = True
+  OldCreateOrder = False
+  Position = poOwnerFormCenter
+  Visible = True
+  OnDestroy = FormDestroy
+  OnKeyDown = FormKeyDown
+  PixelsPerInch = 96
+  TextHeight = 13
+  object edSearch: TEdit
+    Left = 8
+    Top = 8
+    Width = 193
+    Height = 21
+    TabOrder = 0
+  end
+  object btPrev: TButton
+    Left = 8
+    Top = 35
+    Width = 75
+    Height = 25
+    Caption = 'Prev'
+    TabOrder = 1
+    OnClick = btNextClick
+  end
+  object btNext: TButton
+    Left = 126
+    Top = 35
+    Width = 75
+    Height = 25
+    Caption = 'Next'
+    TabOrder = 2
+    OnClick = btNextClick
+  end
+end
