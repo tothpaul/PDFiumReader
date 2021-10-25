@@ -1349,7 +1349,7 @@ begin
       begin
         case Options.PageOrder of
           0:
-            pn := Options.PageNumber - 1 + (c - pc - 1) * (c + 1) + pr; // Horizontal
+            pn := Options.PageNumber - 1 + (c - pc - 1) * c + pr; // Horizontal
           1:
             pn := Options.PageNumber - 1 + (c - pc - 1) * R + R - pr - 1; // Horizontal inversé
           2:
