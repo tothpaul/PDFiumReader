@@ -5,6 +5,7 @@
 #include "public/fpdf_text.h"
 #include "public/fpdf_save.h"
 #include "public/fpdf_edit.h"
+#include "public/fpdf_doc.h"
 
 #include "libpdfium.h"
 
@@ -728,7 +729,6 @@ int WINAPI PDF_Create(int RequestedVersion, IPDFium* pdf) {
   PDF->GetPageSize = PDF_GetPageSize;
   PDF->GetPage = PDF_GetPage;
   PDF->SaveToStream = PDF_SaveToStream;
-  PDF->SaveToProc = PDF_SaveToProc;
   PDF->SaveToProc = PDF_SaveToProc;
   PDF->GetMetaText = PDF_GetMetaText;
   // Result

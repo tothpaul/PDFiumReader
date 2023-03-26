@@ -470,19 +470,19 @@ end;
 
 procedure TPDFiumFrame.LoadFromFile(const AFileName: string);
 var
-  AnsiName: AnsiString;
+  UTF8Name: UTF8String;
   Password: string;
   AnsiPwd : AnsiString;
 begin
-  AnsiName := AnsiString(AFileName);
+  UTF8Name := UTF8String(AFileName);
   ClearPages;
-  FError := FPDF.LoadFromFile(TAnsiString(AnsiName), '');
+  FError := FPDF.LoadFromFile(TUTF8String(UTF8Name), '');
   while FError = FPDF_ERR_PASSWORD do
   begin
     if InputQuery('PDFium', 'Password', Password) = False then
       Break;
     AnsiPwd := AnsiString(Password);
-    FError := FPDF.LoadFromFile(PAnsiChar(AnsiName), PAnsiChar(AnsiPwd));
+    FError := FPDF.LoadFromFile(TUTF8String(UTF8Name), PAnsiChar(AnsiPwd));
   end;
   OnLoad;
 end;

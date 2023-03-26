@@ -1,9 +1,14 @@
 unit Execute.libPDFium;
 
 {
-   libPDFium.dll (c)2017-2020 by Execute SARL
+   libPDFium.dll (c)2017-2023 by Execute SARL
    http://www.execute.fr
    https://github.com/tothpaul/PDFiumReader
+
+
+   v26.03.2023 - update the PDFIUM source code (23.03.2023 23:09:01)
+               - LoadFromFile use now an UTF8 FileName
+
 }
 {$WARN SYMBOL_PLATFORM OFF}
 
@@ -15,16 +20,18 @@ uses
   System.Math;
 
 const
-  PDFIUM_VERSION = 3;
+  PDFIUM_VERSION = 4;
 
 type
 {.$DEFINE USE_STRINGS} // use 'const AnsiString' instead of 'PAnsiChar' for input parameters
 {$IFDEF USE_STRINGS}
   TAnsiString = AnsiString;
   TString = string;
+  TUTF8String = UTF8String;
 {$ELSE}
   TAnsiString = PAnsiChar;
   TString = PChar;
+  TUTF8String = PAnsiChar;
 {$ENDIF}
 
   // One point is 1/72 inch (around 0.3528 mm).
@@ -106,7 +113,7 @@ type
     function GetVersion: Integer; stdcall;
     function GetError: Integer; stdcall;
     function CloseDocument: integer; stdcall;
-    function LoadFromFile(const FileName, Password: TAnsiString): Integer; stdcall;
+    function LoadFromFile(const FileName, Password: TUTF8String): Integer; stdcall;
     function LoadFromMemory(data: Pointer; Size: Integer; const password: TAnsiString): Integer; stdcall;
     function GetPermissions: LongWord; stdcall;
     function GetPageCount: Integer; stdcall;

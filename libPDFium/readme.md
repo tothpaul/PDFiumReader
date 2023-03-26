@@ -1,4 +1,4 @@
-# libPDFium (c)2018-2020 Execute SARL
+# libPDFium (c)2018-2023 Execute SARL
 
 A PDFium Library designed for Delphi, by a Delphi developper.
 

@@ -1,4 +1,4 @@
-// libdfium v1.0.2 (c)2018-2021 Execute SARL <contact@execute.fr>
+// libdfium v1.0.2 (c)2018-2023 Execute SARL <contact@execute.fr>
 
 #ifndef PUBLIC_FPDFVIEW_H_
 typedef void *FPDF_DOCUMENT;
@@ -11,7 +11,7 @@ typedef long ULONG;
 typedef int HDC;
 #endif
 
-#define PDFIUM_VERSION 3
+#define PDFIUM_VERSION 4
 
 typedef int (__stdcall *TWriteProc)(const void *data, int size, void *UserData);
 
